@@ -50,3 +50,33 @@ output "cognito_user_pool_id" {
 output "cognito_client_id" {
   value = aws_cognito_user_pool_client.flutter_app_client.id
 }
+
+resource "local_file" "amplify_config_dart" {
+
+  filename = "../lib/amplifyconfiguration.dart"
+  
+  content = <<-EOT
+const amplifyconfig = ''' {
+    "UserAgent": "aws-amplify-cli/2.0",
+    "Version": "1.0",
+    "auth": {
+        "plugins": {
+            "awsCognitoAuthPlugin": {
+                "CognitoUserPool": {
+                    "Default": {
+                        "PoolId": "${aws_cognito_user_pool.icesi_score_pool.id}",
+                        "AppClientId": "${aws_cognito_user_pool_client.flutter_app_client.id}",
+                        "Region": "us-east-1"
+                    }
+                },
+                "Auth": {
+                    "Default": {
+                        "authenticationFlowType": "USER_SRP_AUTH"
+                    }
+                }
+            }
+        }
+    }
+}''';
+  EOT
+}
