@@ -54,7 +54,6 @@ output "cognito_client_id" {
 resource "local_file" "amplify_config_dart" {
 
   filename = "../lib/amplifyconfiguration.dart"
-  
   content = <<-EOT
 const amplifyconfig = ''' {
     "UserAgent": "aws-amplify-cli/2.0",
