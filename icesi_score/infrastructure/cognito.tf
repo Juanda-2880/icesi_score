@@ -65,7 +65,7 @@ const amplifyconfig = ''' {
                     "Default": {
                         "PoolId": "${aws_cognito_user_pool.icesi_score_pool.id}",
                         "AppClientId": "${aws_cognito_user_pool_client.flutter_app_client.id}",
-                        "Region": "us-east-1"
+                        "Region": "us-east-2"
                     }
                 },
                 "Auth": {
