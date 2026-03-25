@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:url_launcher/url_launcher.dart'; // Librería para el In-App Browser
 import 'home_screen.dart';
 import 'admin_dashboard_screen.dart';
 
@@ -19,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _useSSO = false;
 
-  // Login tradicional con Cognito
+  // 1. Login tradicional con Cognito y enrutamiento por roles
   Future<void> _signInWithCognito() async {
     setState(() => _isLoading = true);
     try {
@@ -67,31 +68,44 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Placeholder para el SSO de Icesi usando OIDC
+  // 2. SSO de Icesi usando In-App Browser (Prototipo UX)
+  // 2. SSO de Icesi usando In-App Browser (SIMULACIÓN PARA PRESENTACIÓN)
   Future<void> _signInWithSSO() async {
-    try {
-      // Este es el llamado real que hará Flutter cuando configuremos el OIDC en AWS Cognito
-      final result = await Amplify.Auth.signInWithWebUI(
-        provider: const AuthProvider.custom('IcesiOIDC'),
-      );
+    final Uri ssoUrl = Uri.parse('https://portal.icesi.edu.co/');
 
-      if (result.isSignedIn && mounted) {
-        // La lógica de extracción de Token y ruteo iría aquí también
+    try {
+      // 1. Abrimos el navegador in-app.
+      // El código se pausa aquí hasta que el usuario cierre la ventana (la 'X').
+      await launchUrl(ssoUrl, mode: LaunchMode.inAppBrowserView);
+
+      // 2. Cuando el usuario cierra el navegador, SIMULAMOS que el login fue un éxito
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Autenticación OIDC Exitosa'),
+            content: Text('Simulando validación OIDC exitosa...'),
             backgroundColor: Colors.green,
           ),
         );
+
+        // 3. Enrutamos directamente a la vista de Administrador con un Token Falso
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                const AdminDashboardScreen(token: "mock_sso_admin_token_fase2"),
+          ),
+          (route) => false,
+        );
       }
     } catch (e) {
-      // Por ahora atrapamos el error hasta que configuremos la infraestructura
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Integración SSO (OIDC) planeada para la Fase 2 🚀'),
-          backgroundColor: Color(0xFF5C5CFF),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo abrir el portal'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -104,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Switch para el SSO
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -131,6 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 30),
 
+            // Vista Condicional
             if (_useSSO) ...[
               const Center(
                 child: Text(
@@ -141,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 30),
               ElevatedButton.icon(
-                onPressed: _signInWithSSO,
+                onPressed: _signInWithSSO, // Llama al WebView
                 icon: const Icon(Icons.school, color: Colors.white),
                 label: const Text('Continue with Icesi SSO'),
                 style: ElevatedButton.styleFrom(
