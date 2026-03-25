@@ -79,3 +79,17 @@ const amplifyconfig = ''' {
 }''';
   EOT
 }
+
+resource "aws_cognito_user_group" "admins_group" {
+  name         = "Admins"
+  user_pool_id = aws_cognito_user_pool.icesi_score_pool.id
+  description  = "Administradores de la plataforma SofaScore (Profesores/Organizadores)"
+  
+}
+
+
+resource "aws_cognito_user_group" "students_group" {
+  name         = "Estudiantes"
+  user_pool_id = aws_cognito_user_pool.icesi_score_pool.id
+  description  = "Usuarios regulares de la aplicación"
+}

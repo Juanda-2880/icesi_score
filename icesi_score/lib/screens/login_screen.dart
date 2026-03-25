@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
-import 'home_screen.dart';
 import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'home_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,8 +17,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
-  bool _useSSO = false; // Controlador del Switch de SSO
+  bool _useSSO = false;
 
+  // Login tradicional con Cognito
   Future<void> _signInWithCognito() async {
     setState(() => _isLoading = true);
     try {
@@ -26,16 +29,28 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (result.isSignedIn && mounted) {
-        // Obtener la sesión para sacar el Token
         final session =
             await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
         final jwtToken = session.userPoolTokensResult.value.accessToken.raw;
 
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => HomeScreen(token: jwtToken)),
-          (route) => false,
-        );
+        Map<String, dynamic> decodedToken = JwtDecoder.decode(jwtToken);
+        List<dynamic> groups = decodedToken['cognito:groups'] ?? [];
+
+        if (groups.contains('Admins')) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminDashboardScreen(token: jwtToken),
+            ),
+            (route) => false,
+          );
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => HomeScreen(token: jwtToken)),
+            (route) => false,
+          );
+        }
       }
     } on AuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,13 +67,32 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _signInWithSSO() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Integración con Icesi SSO planeada para la Fase 2 🚀'),
-        backgroundColor: Color(0xFF5C5CFF),
-      ),
-    );
+  // Placeholder para el SSO de Icesi usando OIDC
+  Future<void> _signInWithSSO() async {
+    try {
+      // Este es el llamado real que hará Flutter cuando configuremos el OIDC en AWS Cognito
+      final result = await Amplify.Auth.signInWithWebUI(
+        provider: const AuthProvider.custom('IcesiOIDC'),
+      );
+
+      if (result.isSignedIn && mounted) {
+        // La lógica de extracción de Token y ruteo iría aquí también
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Autenticación OIDC Exitosa'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      // Por ahora atrapamos el error hasta que configuremos la infraestructura
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Integración SSO (OIDC) planeada para la Fase 2 🚀'),
+          backgroundColor: Color(0xFF5C5CFF),
+        ),
+      );
+    }
   }
 
   @override
@@ -70,7 +104,6 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // El Switch de SSO integrado en una tarjeta
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -98,7 +131,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 30),
 
-            // Interfaz condicional: SSO vs Cognito Normal
             if (_useSSO) ...[
               const Center(
                 child: Text(
@@ -146,18 +178,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(hintText: '••••••••'),
-              ),
-              const SizedBox(height: 10),
-
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {}, // Aquí iría el "Olvidé mi contraseña"
-                  child: const Text(
-                    'Forgot Password?',
-                    style: TextStyle(color: Color(0xFF5C5CFF)),
-                  ),
-                ),
               ),
               const SizedBox(height: 30),
 

@@ -28,21 +28,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
           },
         ),
       );
-      // Redirigir a la pantalla de código
+
       if (mounted) {
+        // Redirigir enviando correo y contraseña para el auto-login
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => VerifyScreen(email: _emailController.text.trim()),
+            builder: (_) => VerifyScreen(
+              email: _emailController.text.trim(),
+              password: _passwordController.text.trim(),
+            ),
           ),
         );
       }
     } on AuthException catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -79,6 +83,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 hintText: 'your.email@uicesi.edu.co',
               ),
@@ -101,7 +106,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 40),
 
             _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF5C5CFF)),
+                  )
                 : ElevatedButton(
                     onPressed: _signUp,
                     child: const Text('Create Account'),
