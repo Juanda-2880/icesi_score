@@ -13,21 +13,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController =
-      TextEditingController(); // Confirmación de contraseña
+  final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
 
   Future<void> _signUp() async {
-    // 1. VALIDACIÓN LOCAL: Verificar que las contraseñas coincidan
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Las contraseñas no coinciden. Intenta de nuevo.'),
+          content: Text('Las contraseñas no coinciden.'),
           backgroundColor: Colors.red,
         ),
       );
-      return; // Detiene la ejecución si no coinciden
+      return;
     }
 
     setState(() => _isLoading = true);
@@ -44,12 +42,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (mounted) {
-        // Redirigir enviando SOLO EL CORREO. Ya no mandamos la contraseña.
+        // CAMBIO: Volvemos a mandar la contraseña para poder hacer el auto-login
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => VerifyScreen(
-              email: _emailController.text.trim(), // Aquí ya no hay error rojo
+              email: _emailController.text.trim(),
+              password: _passwordController.text.trim(),
             ),
           ),
         );
@@ -63,6 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  // ... (El resto del método build queda exactamente igual) ...
   @override
   Widget build(BuildContext context) {
     return Scaffold(

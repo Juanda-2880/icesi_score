@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
-import 'welcome_screen.dart'; // CAMBIO: Ahora importamos el Welcome Screen
+import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'home_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 class VerifyScreen extends StatefulWidget {
   final String email;
+  final String password; // CAMBIO: Recibimos la contraseña de nuevo
 
-  const VerifyScreen({super.key, required this.email});
+  const VerifyScreen({super.key, required this.email, required this.password});
 
   @override
   State<VerifyScreen> createState() => _VerifyScreenState();
@@ -15,8 +19,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
   final _codeController = TextEditingController();
   bool _isLoading = false;
 
-  // Actualizamos el nombre de la función para mayor claridad
-  Future<void> _verifyAndRedirectToWelcome() async {
+  Future<void> _verifyAndLogin() async {
     setState(() => _isLoading = true);
     try {
       // 1. INTENTAR CONFIRMAR EL CÓDIGO
@@ -29,28 +32,51 @@ class _VerifyScreenState extends State<VerifyScreen> {
         if (e.message.contains('Current status is CONFIRMED') ||
             e.message.contains('User cannot be confirmed')) {
           print(
-            'El usuario ya estaba verificado. Procediendo a la pantalla de bienvenida...',
+            'El usuario ya estaba verificado. Procediendo al auto-login...',
           );
         } else {
           rethrow;
         }
       }
 
-      // 2. Éxito: Mostrar mensaje y redirigir a la pantalla principal
-      if (mounted) {
+      // 2. AUTO-LOGIN DIRECTO
+      final signInResult = await Amplify.Auth.signIn(
+        username: widget.email,
+        password: widget.password,
+      );
+
+      if (signInResult.isSignedIn && mounted) {
+        // Extraemos el Token y los roles
+        final session =
+            await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
+        final jwtToken = session.userPoolTokensResult.value.accessToken.raw;
+
+        Map<String, dynamic> decodedToken = JwtDecoder.decode(jwtToken);
+        List<dynamic> groups = decodedToken['cognito:groups'] ?? [];
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('¡Cuenta creada y verificada con éxito!'),
+            content: Text('¡Bienvenido! Sesión iniciada.'),
             backgroundColor: Colors.green,
           ),
         );
 
-        // 3. CAMBIO: Mandar al WelcomeScreen y borrar el historial
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-          (route) => false,
-        );
+        // Redirigimos al Home o al Panel de Admin según corresponda
+        if (groups.contains('Admins')) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminDashboardScreen(token: jwtToken),
+            ),
+            (route) => false,
+          );
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => HomeScreen(token: jwtToken)),
+            (route) => false,
+          );
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,9 +112,10 @@ class _VerifyScreenState extends State<VerifyScreen> {
                     child: CircularProgressIndicator(color: Color(0xFF5C5CFF)),
                   )
                 : ElevatedButton(
-                    onPressed:
-                        _verifyAndRedirectToWelcome, // CAMBIO: Llama a la nueva función
-                    child: const Text('Verify and Continue'),
+                    onPressed: _verifyAndLogin,
+                    child: const Text(
+                      'Verify and Enter App',
+                    ), // Actualizamos el texto del botón
                   ),
           ],
         ),
