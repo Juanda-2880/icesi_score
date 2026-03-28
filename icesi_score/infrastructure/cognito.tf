@@ -1,7 +1,3 @@
-provider "aws" {
-    region = "us-east-2"
-}
-
 resource "aws_cognito_user_pool" "icesi_score_pool" {
   name = "icesi-score-users"
 
