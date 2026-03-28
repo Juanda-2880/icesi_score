@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
-import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
-import 'package:jwt_decoder/jwt_decoder.dart';
-import 'home_screen.dart';
-import 'admin_dashboard_screen.dart'; // Asegúrate de crear este archivo
+import 'login_screen.dart'; // Importamos el Login para redirigir allá
 
 class VerifyScreen extends StatefulWidget {
   final String email;
-  final String password; // Contraseña oculta para el auto-login
 
-  const VerifyScreen({super.key, required this.email, required this.password});
+  // ¡Mira esto! Ya no exige "password"
+  const VerifyScreen({super.key, required this.email});
 
   @override
   State<VerifyScreen> createState() => _VerifyScreenState();
@@ -19,7 +16,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
   final _codeController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _verifyAndLogin() async {
+  Future<void> _verifyAndRedirectToLogin() async {
     setState(() => _isLoading = true);
     try {
       // 1. INTENTAR CONFIRMAR EL CÓDIGO
@@ -32,56 +29,32 @@ class _VerifyScreenState extends State<VerifyScreen> {
         // INTERCEPTOR: Si el error es porque ya estaba confirmado, seguimos adelante
         if (e.message.contains('Current status is CONFIRMED') ||
             e.message.contains('User cannot be confirmed')) {
-          print(
-            'El usuario ya estaba verificado. Procediendo al auto-login...',
-          );
+          print('El usuario ya estaba verificado. Procediendo al Login...');
         } else {
-          // Si es otro error (ej. pusiste mal el código de 6 dígitos), lanzamos el error
+          // Si es otro error (ej. pusiste mal el código de 6 dígitos), lanzamos el error a la pantalla
           rethrow;
         }
       }
 
-      // 2. AUTO LOGIN (Ahora sí llegará a este paso)
-      final signInResult = await Amplify.Auth.signIn(
-        username: widget.email,
-        password: widget.password,
-      );
-
-      if (signInResult.isSignedIn && mounted) {
-        // 3. Extraer y decodificar el JWT
-        final session =
-            await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
-        final jwtToken = session.userPoolTokensResult.value.accessToken.raw;
-
-        Map<String, dynamic> decodedToken = JwtDecoder.decode(jwtToken);
-        List<dynamic> groups = decodedToken['cognito:groups'] ?? [];
-
+      // 2. Éxito: Mostrar mensaje verde y redirigir al Login
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('¡Cuenta verificada y sesión iniciada!'),
+            content: Text(
+              '¡Cuenta verificada con éxito! Inicia sesión para continuar.',
+            ),
             backgroundColor: Colors.green,
           ),
         );
 
-        // 4. Enrutamiento por Roles
-        if (groups.contains('Admins')) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AdminDashboardScreen(token: jwtToken),
-            ),
-            (route) => false,
-          );
-        } else {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => HomeScreen(token: jwtToken)),
-            (route) => false,
-          );
-        }
+        // 3. Mandar al Login y borrar todo el historial de navegación para que no pueda devolverse
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
       }
     } catch (e) {
-      // Solo mostrará error si la contraseña está mal o el código era incorrecto
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
@@ -115,7 +88,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                     child: CircularProgressIndicator(color: Color(0xFF5C5CFF)),
                   )
                 : ElevatedButton(
-                    onPressed: _verifyAndLogin,
+                    onPressed: _verifyAndRedirectToLogin,
                     child: const Text('Verify and Continue'),
                   ),
           ],

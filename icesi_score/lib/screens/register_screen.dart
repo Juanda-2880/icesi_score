@@ -13,7 +13,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController(); // NUEVO CAMPO
+  final _confirmPasswordController =
+      TextEditingController(); // Confirmación de contraseña
 
   bool _isLoading = false;
 
@@ -26,7 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           backgroundColor: Colors.red,
         ),
       );
-      return; // Detiene la ejecución aquí, no llama a AWS
+      return; // Detiene la ejecución si no coinciden
     }
 
     setState(() => _isLoading = true);
@@ -43,12 +44,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (mounted) {
+        // Redirigir enviando SOLO EL CORREO. Ya no mandamos la contraseña.
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => VerifyScreen(
-              email: _emailController.text.trim(),
-              password: _passwordController.text.trim(),
+              email: _emailController.text.trim(), // Aquí ya no hay error rojo
             ),
           ),
         );
@@ -117,7 +118,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 20),
 
-            // NUEVO CAMPO VISUAL
             const Text(
               'Confirm Password',
               style: TextStyle(

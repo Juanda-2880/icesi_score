@@ -3,7 +3,7 @@ import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
 import 'amplifyconfiguration.dart';
 import 'theme/app_theme.dart';
-import 'screens/welcome_screen.dart';
+import 'screens/welcome_screen.dart'; // Aquí llamamos a tu nuevo diseño
 
 void main() {
   runApp(const IcesiScoreApp());
@@ -31,8 +31,9 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
       await Amplify.addPlugin(auth);
       await Amplify.configure(amplifyconfig);
       setState(() => _isConfigured = true);
+      print('✅ Amplify configurado correctamente');
     } catch (e) {
-      print('Error configurando Amplify: $e');
+      print('❌ Error configurando Amplify: $e');
     }
   }
 
@@ -41,9 +42,9 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
     return MaterialApp(
       title: 'IcesiScore',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.darkTheme, // Tu nuevo tema oscuro
       home: _isConfigured
-          ? const WelcomeScreen()
+          ? const WelcomeScreen() // Tu nueva pantalla de inicio
           : const Scaffold(body: Center(child: CircularProgressIndicator())),
     );
   }
