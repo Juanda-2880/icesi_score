@@ -22,54 +22,66 @@ class _VerifyScreenState extends State<VerifyScreen> {
   Future<void> _verifyAndLogin() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Confirmar código
-      final confirmResult = await Amplify.Auth.confirmSignUp(
+      // 1. INTENTAR CONFIRMAR EL CÓDIGO
+      try {
+        await Amplify.Auth.confirmSignUp(
+          username: widget.email,
+          confirmationCode: _codeController.text.trim(),
+        );
+      } on AuthException catch (e) {
+        // INTERCEPTOR: Si el error es porque ya estaba confirmado, seguimos adelante
+        if (e.message.contains('Current status is CONFIRMED') ||
+            e.message.contains('User cannot be confirmed')) {
+          print(
+            'El usuario ya estaba verificado. Procediendo al auto-login...',
+          );
+        } else {
+          // Si es otro error (ej. pusiste mal el código de 6 dígitos), lanzamos el error
+          rethrow;
+        }
+      }
+
+      // 2. AUTO LOGIN (Ahora sí llegará a este paso)
+      final signInResult = await Amplify.Auth.signIn(
         username: widget.email,
-        confirmationCode: _codeController.text.trim(),
+        password: widget.password,
       );
 
-      if (confirmResult.isSignUpComplete && mounted) {
-        // 2. Auto Login
-        final signInResult = await Amplify.Auth.signIn(
-          username: widget.email,
-          password: widget.password,
+      if (signInResult.isSignedIn && mounted) {
+        // 3. Extraer y decodificar el JWT
+        final session =
+            await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
+        final jwtToken = session.userPoolTokensResult.value.accessToken.raw;
+
+        Map<String, dynamic> decodedToken = JwtDecoder.decode(jwtToken);
+        List<dynamic> groups = decodedToken['cognito:groups'] ?? [];
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Cuenta verificada y sesión iniciada!'),
+            backgroundColor: Colors.green,
+          ),
         );
 
-        if (signInResult.isSignedIn && mounted) {
-          // 3. Extraer y decodificar el JWT
-          final session =
-              await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
-          final jwtToken = session.userPoolTokensResult.value.accessToken.raw;
-
-          Map<String, dynamic> decodedToken = JwtDecoder.decode(jwtToken);
-          List<dynamic> groups = decodedToken['cognito:groups'] ?? [];
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('¡Cuenta verificada y sesión iniciada!'),
-              backgroundColor: Colors.green,
+        // 4. Enrutamiento por Roles
+        if (groups.contains('Admins')) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminDashboardScreen(token: jwtToken),
             ),
+            (route) => false,
           );
-
-          // 4. Enrutamiento por Roles
-          if (groups.contains('Admins')) {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AdminDashboardScreen(token: jwtToken),
-              ),
-              (route) => false,
-            );
-          } else {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => HomeScreen(token: jwtToken)),
-              (route) => false,
-            );
-          }
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => HomeScreen(token: jwtToken)),
+            (route) => false,
+          );
         }
       }
     } catch (e) {
+      // Solo mostrará error si la contraseña está mal o el código era incorrecto
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
