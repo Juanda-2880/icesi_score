@@ -93,3 +93,25 @@ resource "aws_cognito_user_group" "students_group" {
   user_pool_id = aws_cognito_user_pool.icesi_score_pool.id
   description  = "Usuarios regulares de la aplicación"
 }
+
+# 1. Crear el usuario Administrador base
+resource "aws_cognito_user" "super_admin" {
+  user_pool_id = aws_cognito_user_pool.icesi_score_pool.id
+  username     = "admin@uicesi.edu.co"
+  
+  attributes = {
+    email          = "admin@uicesi.edu.co"
+    email_verified = true
+  }
+  
+  # Contraseña inicial (Cognito podría pedirte cambiarla al primer login, 
+  # pero en nuestro flujo funcionará para pruebas)
+  password = "SuperPassword123!" 
+}
+
+# 2. Meter a ese usuario en el grupo de Admins
+resource "aws_cognito_user_in_group" "super_admin_membership" {
+  user_pool_id = aws_cognito_user_pool.icesi_score_pool.id
+  group_name   = aws_cognito_user_group.admins_group.name
+  username     = aws_cognito_user.super_admin.username
+}

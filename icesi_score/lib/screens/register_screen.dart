@@ -13,9 +13,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController(); // NUEVO CAMPO
+
   bool _isLoading = false;
 
   Future<void> _signUp() async {
+    // 1. VALIDACIÓN LOCAL: Verificar que las contraseñas coincidan
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Las contraseñas no coinciden. Intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return; // Detiene la ejecución aquí, no llama a AWS
+    }
+
     setState(() => _isLoading = true);
     try {
       await Amplify.Auth.signUp(
@@ -30,7 +43,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (mounted) {
-        // Redirigir enviando correo y contraseña para el auto-login
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -100,6 +112,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(hintText: '••••••••'),
+            ),
+            const SizedBox(height: 20),
+
+            // NUEVO CAMPO VISUAL
+            const Text(
+              'Confirm Password',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _confirmPasswordController,
               obscureText: true,
               decoration: const InputDecoration(hintText: '••••••••'),
             ),
