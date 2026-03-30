@@ -7,6 +7,7 @@ import 'theme/app_theme.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
+import 'screens/test_screen.dart'; 
 
 void main() {
   runApp(const IcesiScoreApp());
@@ -77,14 +78,20 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
       title: 'IcesiScore',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
+      
+      // --- LÓGICA ORIGINAL COMENTADA (NO BORRAR) ---
       // Si está cargando muestra el circulo, si no, muestra la pantalla decidida
-      home: _isLoading
-          ? const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(color: Color(0xFF5C5CFF)),
-              ),
-            )
-          : _initialScreen,
+      // home: _isLoading
+      //     ? const Scaffold(
+      //         body: Center(
+      //           child: CircularProgressIndicator(color: Color(0xFF5C5CFF)),
+      //         ),
+      //       )
+      //     : _initialScreen,
+      
+      // --- PLAYGROUND DE COMPONENTES (TEMPORAL) ---
+      home: const TestScreen(),
     );
   }
 }
+
