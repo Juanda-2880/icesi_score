@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
-import 'package:jwt_decoder/jwt_decoder.dart';
 import 'amplifyconfiguration.dart';
 import 'theme/app_theme.dart';
-import 'screens/welcome_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/admin_dashboard_screen.dart';
-import 'screens/test_screen.dart'; 
+import 'models/app_user.dart';
+import 'services/auth_service.dart';
+import 'screens/auth/welcome_screen.dart';
+import 'screens/home/home_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/dev/test_screen.dart';
 
 void main() {
   runApp(const IcesiScoreApp());
@@ -27,48 +28,28 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
   @override
   void initState() {
     super.initState();
-    _configureAmplifyAndCheckAuth();
+    _initializeApp();
   }
 
-  Future<void> _configureAmplifyAndCheckAuth() async {
+  Future<void> _initializeApp() async {
     try {
-      // 1. Configurar Amplify
       final auth = AmplifyAuthCognito();
       await Amplify.addPlugin(auth);
       await Amplify.configure(amplifyconfig);
-      print('✅ Amplify configurado correctamente');
 
-      // 2. Revisar si el usuario ya tiene sesión iniciada en el celular
-      final session = await Amplify.Auth.fetchAuthSession();
+      final AppUser? user = await AuthService.checkExistingSession();
 
-      if (session.isSignedIn) {
-        // Extraer el token y los roles para saber a dónde mandarlo
-        final cognitoSession = session as CognitoAuthSession;
-        final jwtToken =
-            cognitoSession.userPoolTokensResult.value.accessToken.raw;
-
-        Map<String, dynamic> decodedToken = JwtDecoder.decode(jwtToken);
-        List<dynamic> groups = decodedToken['cognito:groups'] ?? [];
-
-        if (groups.contains('Admins')) {
-          _initialScreen = AdminDashboardScreen(token: jwtToken);
-        } else {
-          _initialScreen = HomeScreen(token: jwtToken);
-        }
+      if (user != null) {
+        _initialScreen = user.role == UserRole.admin
+            ? AdminDashboardScreen(token: user.token)
+            : HomeScreen(token: user.token);
       } else {
-        // Si no hay sesión guardada, mostramos la pantalla de bienvenida normal
         _initialScreen = const WelcomeScreen();
       }
     } catch (e) {
-      print('❌ Error inicializando la app: $e');
-      // Por seguridad, si hay error lo mandamos al inicio
       _initialScreen = const WelcomeScreen();
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false; // Quitamos la pantalla de carga
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -78,20 +59,15 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
       title: 'IcesiScore',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      
-      // --- LÓGICA ORIGINAL COMENTADA (NO BORRAR) ---
-      // Si está cargando muestra el circulo, si no, muestra la pantalla decidida
-      // home: _isLoading
-      //     ? const Scaffold(
-      //         body: Center(
-      //           child: CircularProgressIndicator(color: Color(0xFF5C5CFF)),
-      //         ),
-      //       )
-      //     : _initialScreen,
-      
-      // --- PLAYGROUND DE COMPONENTES (TEMPORAL) ---
-      home: const TestScreen(),
+      // Cambia TestScreen() por _initialScreen cuando quieras salir del playground
+      // home: const TestScreen(),
+       home: _isLoading
+           ? const Scaffold(
+               body: Center(
+                 child: CircularProgressIndicator(color: AppTheme.primaryColor),
+               ),
+             )
+           : _initialScreen,
     );
   }
 }
-
