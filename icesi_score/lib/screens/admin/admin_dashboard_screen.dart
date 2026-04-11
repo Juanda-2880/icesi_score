@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:amplify_flutter/amplify_flutter.dart';
-import 'welcome_screen.dart';
+import '../../services/auth_service.dart';
+import '../auth/welcome_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   final String token;
 
   const AdminDashboardScreen({super.key, required this.token});
 
-  // Función de cierre de sesión
-  Future<void> _signOut(BuildContext context) async {
+  Future<void> _handleSignOut(BuildContext context) async {
     try {
-      await Amplify.Auth.signOut();
+      await AuthService.signOut();
       if (context.mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -18,13 +17,15 @@ class AdminDashboardScreen extends StatelessWidget {
           (route) => false,
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al cerrar sesión: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    } on Exception catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cerrar sesion: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -36,12 +37,12 @@ class AdminDashboardScreen extends StatelessWidget {
           'Admin Panel',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.orange.shade800, // Color distintivo para Admins
+        backgroundColor: Colors.orange.shade800,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Cerrar Sesión',
-            onPressed: () => _signOut(context),
+            tooltip: 'Cerrar Sesion',
+            onPressed: () => _handleSignOut(context),
           ),
         ],
       ),
@@ -69,7 +70,6 @@ class AdminDashboardScreen extends StatelessWidget {
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 30),
-            // Botón preparado para la función de promover a otros usuarios
             ElevatedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(

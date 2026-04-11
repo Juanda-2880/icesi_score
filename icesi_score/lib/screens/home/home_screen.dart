@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:amplify_flutter/amplify_flutter.dart';
-import 'welcome_screen.dart';
+import '../../services/auth_service.dart';
+import '../auth/welcome_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String token;
 
   const HomeScreen({super.key, required this.token});
 
-  // Función de cierre de sesión
-  Future<void> _signOut(BuildContext context) async {
+  Future<void> _handleSignOut(BuildContext context) async {
     try {
-      await Amplify.Auth.signOut();
+      await AuthService.signOut();
       if (context.mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -18,13 +17,15 @@ class HomeScreen extends StatelessWidget {
           (route) => false,
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al cerrar sesión: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    } on Exception catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cerrar sesion: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -39,8 +40,8 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Cerrar Sesión',
-            onPressed: () => _signOut(context),
+            tooltip: 'Cerrar Sesion',
+            onPressed: () => _handleSignOut(context),
           ),
         ],
       ),
@@ -51,7 +52,7 @@ class HomeScreen extends StatelessWidget {
             const Icon(Icons.sports_soccer, size: 80, color: Color(0xFF5C5CFF)),
             const SizedBox(height: 20),
             const Text(
-              '¡Bienvenido Estudiante!',
+              'Bienvenido Estudiante!',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -60,11 +61,10 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Aquí verás los partidos de la U pronto.',
+              'Aqui veras los partidos de la U pronto.',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 30),
-            // Solo para que veas que el token llegó bien a la pantalla:
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(

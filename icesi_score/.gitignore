@@ -49,8 +49,35 @@ app.*.map.json
 *.tfstate
 *.tfstate.backup
 .terraform.tfstate.lock.info
+infrastructure/*.zip
+
+# Variables y secretos de Terraform
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 # Python / Backend
 __pycache__/
 .venv/
 node_modules/
+
+# Android
+**/android/local.properties
+**/android/.gradle/
+*.jks
+*.keystore
+
+# iOS / macOS
+**/ios/Pods/
+**/ios/.symlinks/
+**/macos/Pods/
+**/macos/.symlinks/
+
+# Variables de entorno
+.env
+*.env

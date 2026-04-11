@@ -15,7 +15,6 @@ class WelcomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(),
-              // LOGO
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -48,12 +47,10 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Track • Predict • Win',
+                'Track - Predict - Win',
                 style: TextStyle(color: Colors.orangeAccent, fontSize: 14),
               ),
-
               const Spacer(),
-
               ElevatedButton(
                 onPressed: () => Navigator.push(
                   context,
@@ -84,7 +81,6 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 40),
-
               const Text(
                 'Are you a university administrator?',
                 style: TextStyle(color: Colors.grey),
