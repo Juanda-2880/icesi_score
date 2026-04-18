@@ -81,3 +81,9 @@ node_modules/
 # Variables de entorno
 .env
 *.env
+
+# Documentación personal y asistente
+
+CLAUDE.md
+DATABASE.md
+TASKS.md
