@@ -1,4 +1,4 @@
-.PHONY: db-up db-migrate db-seed db-connect db-down venv
+.PHONY: db-up db-migrate db-seed db-connect db-down venv lambda-build
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -26,9 +26,24 @@ $(VENV)/bin/activate:
 	@echo "✓ Entorno virtual listo en $(VENV)/"
 
 # ---------------------------------------------------------------------------
+# lambda-build — empaqueta post_confirmation con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+lambda-build: venv
+	@PKG="backend/post_confirmation/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/post_confirmation/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
 # db-up — abre acceso público temporal desde la IP del desarrollador
 # ---------------------------------------------------------------------------
-db-up:
+db-up: lambda-build
 	@echo "Obteniendo IP pública…"
 	@MY_IP=$$(curl -s https://ifconfig.me) && \
 	 echo "IP detectada: $$MY_IP" && \

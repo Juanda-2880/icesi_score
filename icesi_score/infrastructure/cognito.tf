@@ -1,7 +1,7 @@
 resource "aws_cognito_user_pool" "icesi_score_pool" {
   name = "icesi-score-users"
 
-  username_attributes         = ["email"]
+  username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 
   password_policy {
@@ -17,6 +17,47 @@ resource "aws_cognito_user_pool" "icesi_score_pool" {
       name     = "verified_email"
       priority = 1
     }
+  }
+
+  # Atributos estándar enviados en el sign-up desde Flutter
+  schema {
+    name                = "name"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 255
+    }
+  }
+
+  schema {
+    name                = "phone_number"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 50
+    }
+  }
+
+  # Atributo personalizado: universidad (custom:university en la app Flutter)
+  schema {
+    name                     = "university"
+    attribute_data_type      = "String"
+    mutable                  = true
+    required                 = false
+    developer_only_attribute = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 255
+    }
+  }
+
+  # PostConfirmation trigger → inserta el usuario en RDS con role=NORMAL
+  lambda_config {
+    post_confirmation = aws_lambda_function.post_confirmation.arn
   }
 
   tags = {

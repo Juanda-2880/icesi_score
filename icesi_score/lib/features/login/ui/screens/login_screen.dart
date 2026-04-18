@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../models/app_user.dart';
-import '../../widgets/common/labeled_text_field.dart';
-import '../../widgets/common/loading_button.dart';
-import '../home/home_screen.dart';
-import '../admin/admin_dashboard_screen.dart';
+import '../../../../services/auth_service.dart';
+import '../../../../models/app_user.dart';
+import '../../../../widgets/common/labeled_text_field.dart';
+import '../../../../widgets/common/loading_button.dart';
+import '../../../home/ui/screens/home_screen.dart';
+import '../../../admin/ui/screens/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

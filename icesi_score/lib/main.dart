@@ -5,10 +5,12 @@ import 'amplifyconfiguration.dart';
 import 'theme/app_theme.dart';
 import 'models/app_user.dart';
 import 'services/auth_service.dart';
-import 'screens/auth/welcome_screen.dart';
-import 'screens/home/home_screen.dart';
-import 'screens/admin/admin_dashboard_screen.dart';
-import 'screens/dev/test_screen.dart';
+import 'features/login/ui/screens/welcome_screen.dart';
+import 'features/login/ui/screens/login_screen.dart';
+import 'features/register/ui/screens/register_screen.dart';
+import 'features/verify/ui/screens/verify_screen.dart';
+import 'features/home/ui/screens/home_screen.dart';
+import 'features/admin/ui/screens/admin_dashboard_screen.dart';
 
 void main() {
   runApp(const IcesiScoreApp());
@@ -33,8 +35,7 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
 
   Future<void> _initializeApp() async {
     try {
-      final auth = AmplifyAuthCognito();
-      await Amplify.addPlugin(auth);
+      await Amplify.addPlugin(AmplifyAuthCognito());
       await Amplify.configure(amplifyconfig);
 
       final AppUser? user = await AuthService.checkExistingSession();
@@ -59,15 +60,19 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
       title: 'IcesiScore',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      // Cambia TestScreen() por _initialScreen cuando quieras salir del playground
-      // home: const TestScreen(),
-       home: _isLoading
-           ? const Scaffold(
-               body: Center(
-                 child: CircularProgressIndicator(color: AppTheme.primaryColor),
-               ),
-             )
-           : _initialScreen,
+      // Rutas nombradas usadas por register → verify → login
+      routes: {
+        '/login':    (_) => const LoginScreen(),
+        '/register': (_) => const RegisterScreen(),
+        '/verify':   (_) => const VerifyScreen(),
+      },
+      home: _isLoading
+          ? const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(color: AppTheme.primaryColor),
+              ),
+            )
+          : _initialScreen,
     );
   }
 }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../auth/welcome_screen.dart';
+import '../../../../services/auth_service.dart';
+import '../../../login/ui/screens/welcome_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatelessWidget {
   final String token;
 
-  const HomeScreen({super.key, required this.token});
+  const AdminDashboardScreen({super.key, required this.token});
 
   Future<void> _handleSignOut(BuildContext context) async {
     try {
@@ -34,9 +34,10 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'IcesiScore',
+          'Admin Panel',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        backgroundColor: Colors.orange.shade800,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
@@ -49,10 +50,14 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.sports_soccer, size: 80, color: Color(0xFF5C5CFF)),
+            const Icon(
+              Icons.admin_panel_settings,
+              size: 80,
+              color: Colors.orange,
+            ),
             const SizedBox(height: 20),
             const Text(
-              'Bienvenido Estudiante!',
+              'Panel de Control',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -61,16 +66,23 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Aqui veras los partidos de la U pronto.',
+              'Tienes permisos para modificar el torneo.',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 30),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'Tu Token JWT:\n${token.substring(0, 30)}...',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ElevatedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Falta conectar con la Lambda y API Gateway'),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.person_add),
+              label: const Text('Hacer Admin a un usuario'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade700,
+                foregroundColor: Colors.white,
               ),
             ),
           ],
