@@ -5,6 +5,7 @@ import '../../widgets/common/labeled_text_field.dart';
 import '../../widgets/common/loading_button.dart';
 import '../home/home_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../admin/super_admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -41,9 +42,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _navigateByRole(AppUser user) {
-    final destination = user.role == UserRole.admin
-        ? AdminDashboardScreen(token: user.token)
-        : HomeScreen(token: user.token);
+    Widget destination;
+    if (user.role == UserRole.superAdmin) {
+      destination = const SuperAdminScreen();
+    } else if (user.role == UserRole.admin) {
+      destination = AdminDashboardScreen(token: user.token);
+    } else {
+      destination = HomeScreen(token: user.token);
+    }
 
     Navigator.pushAndRemoveUntil(
       context,
@@ -55,21 +61,21 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Log In')),
+      appBar: AppBar(title: const Text('Iniciar Sesión')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             LabeledTextField(
-              label: 'Email',
+              label: 'Correo Electrónico',
               controller: _emailController,
-              hint: 'your.email@uicesi.edu.co',
+              hint: 'tu.correo@uicesi.edu.co',
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 20),
             LabeledTextField(
-              label: 'Password',
+              label: 'Contraseña',
               controller: _passwordController,
               hint: '••••••••',
               obscureText: true,
@@ -78,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
             LoadingButton(
               isLoading: _isLoading,
               onPressed: _handleLogin,
-              label: 'Log In',
+              label: 'Iniciar Sesión',
             ),
           ],
         ),

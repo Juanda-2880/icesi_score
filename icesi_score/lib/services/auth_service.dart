@@ -4,6 +4,8 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/app_user.dart';
 
 class AuthService {
+  static const String superAdminEmail = 'admin@uicesi.edu.co';
+
   // Revisa si hay sesión activa al arrancar la app.
   // Retorna AppUser si hay sesión, null si no.
   static Future<AppUser?> checkExistingSession() async {
@@ -76,8 +78,21 @@ class AuthService {
         await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
     final jwtToken = session.userPoolTokensResult.value.accessToken.raw;
     final decodedToken = JwtDecoder.decode(jwtToken);
+    
+    // In Cognito, email might be in 'email' or 'username' depending on config, 
+    // but usually 'email' in claims.
+    final String email = decodedToken['email'] ?? '';
     final List<dynamic> groups = decodedToken['cognito:groups'] ?? [];
-    final role = groups.contains('Admins') ? UserRole.admin : UserRole.fan;
-    return AppUser(token: jwtToken, role: role);
+
+    UserRole role;
+    if (email == superAdminEmail) {
+      role = UserRole.superAdmin;
+    } else if (groups.contains('Admins')) {
+      role = UserRole.admin;
+    } else {
+      role = UserRole.fan;
+    }
+
+    return AppUser(email: email, token: jwtToken, role: role);
   }
 }

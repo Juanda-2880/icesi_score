@@ -8,7 +8,7 @@ import 'services/auth_service.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
-import 'screens/dev/test_screen.dart';
+import 'screens/admin/super_admin_screen.dart';
 
 void main() {
   runApp(const IcesiScoreApp());
@@ -40,9 +40,13 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
       final AppUser? user = await AuthService.checkExistingSession();
 
       if (user != null) {
-        _initialScreen = user.role == UserRole.admin
-            ? AdminDashboardScreen(token: user.token)
-            : HomeScreen(token: user.token);
+        if (user.role == UserRole.superAdmin) {
+          _initialScreen = const SuperAdminScreen();
+        } else if (user.role == UserRole.admin) {
+          _initialScreen = AdminDashboardScreen(token: user.token);
+        } else {
+          _initialScreen = HomeScreen(token: user.token);
+        }
       } else {
         _initialScreen = const WelcomeScreen();
       }
@@ -59,15 +63,13 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
       title: 'IcesiScore',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      // Cambia TestScreen() por _initialScreen cuando quieras salir del playground
-      // home: const TestScreen(),
-       home: _isLoading
-           ? const Scaffold(
-               body: Center(
-                 child: CircularProgressIndicator(color: AppTheme.primaryColor),
-               ),
-             )
-           : _initialScreen,
+      home: _isLoading
+          ? const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(color: AppTheme.primaryColor),
+              ),
+            )
+          : _initialScreen,
     );
   }
 }

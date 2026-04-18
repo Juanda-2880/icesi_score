@@ -22,7 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Las contrasenas no coinciden.'),
+          content: Text('Las contraseñas no coinciden.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -50,7 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -61,34 +61,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
+      appBar: AppBar(title: const Text('Crear Cuenta')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             LabeledTextField(
-              label: 'Full Name',
+              label: 'Nombre Completo',
               controller: _nameController,
-              hint: 'Your full name',
+              hint: 'Tu nombre completo',
             ),
             const SizedBox(height: 20),
             LabeledTextField(
-              label: 'Email',
+              label: 'Correo Electrónico',
               controller: _emailController,
-              hint: 'your.email@uicesi.edu.co',
+              hint: 'tu.correo@uicesi.edu.co',
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 20),
             LabeledTextField(
-              label: 'Password',
+              label: 'Contraseña',
               controller: _passwordController,
               hint: '••••••••',
               obscureText: true,
             ),
             const SizedBox(height: 20),
             LabeledTextField(
-              label: 'Confirm Password',
+              label: 'Confirmar Contraseña',
               controller: _confirmPasswordController,
               hint: '••••••••',
               obscureText: true,
@@ -97,7 +97,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             LoadingButton(
               isLoading: _isLoading,
               onPressed: _handleRegister,
-              label: 'Create Account',
+              label: 'Crear Cuenta',
             ),
           ],
         ),

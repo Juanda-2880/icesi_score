@@ -26,7 +26,11 @@ resource "aws_iam_role_policy" "lambda_cognito_policy" {
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
-      Action   = ["cognito-idp:AdminAddUserToGroup"]
+      Action   = [
+        "cognito-idp:AdminAddUserToGroup",
+        "cognito-idp:AdminRemoveUserFromGroup",
+        "cognito-idp:ListUsersInGroup"
+      ]
       Resource = aws_cognito_user_pool.icesi_score_pool.arn
     }]
   })
@@ -82,7 +86,7 @@ resource "aws_apigatewayv2_integration" "lambda_integration" {
 
 resource "aws_apigatewayv2_route" "promote_route" {
   api_id             = aws_apigatewayv2_api.icesi_api.id
-  route_key          = "POST /promote-admin"
+  route_key          = "ANY /promote-admin"
   target             = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id

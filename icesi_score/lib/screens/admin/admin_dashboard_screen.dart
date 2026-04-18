@@ -21,7 +21,7 @@ class AdminDashboardScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cerrar sesion: $e'),
+            content: Text('Error al cerrar sesión: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -34,14 +34,14 @@ class AdminDashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Admin Panel',
+          'Panel de Administración',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.orange.shade800,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Cerrar Sesion',
+            tooltip: 'Cerrar Sesión',
             onPressed: () => _handleSignOut(context),
           ),
         ],
@@ -66,20 +66,25 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Tienes permisos para modificar el torneo.',
+              'Tienes permisos para gestionar operaciones de la plataforma.',
               style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 10),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                'Nota: Solo el administrador principal puede gestionar otros administradores.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.orangeAccent),
+              ),
             ),
             const SizedBox(height: 30),
             ElevatedButton.icon(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Falta conectar con la Lambda y API Gateway'),
-                  ),
-                );
+                // Future operations
               },
-              icon: const Icon(Icons.person_add),
-              label: const Text('Hacer Admin a un usuario'),
+              icon: const Icon(Icons.sports_soccer),
+              label: const Text('Gestionar Partidos'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange.shade700,
                 foregroundColor: Colors.white,

@@ -4,6 +4,7 @@ import '../../models/app_user.dart';
 import '../../widgets/common/loading_button.dart';
 import '../home/home_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../admin/super_admin_screen.dart';
 
 class VerifyScreen extends StatefulWidget {
   final String email;
@@ -34,7 +35,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Bienvenido! Sesion iniciada.'),
+            content: Text('¡Bienvenido! Sesión iniciada.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -43,7 +44,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -52,9 +53,14 @@ class _VerifyScreenState extends State<VerifyScreen> {
   }
 
   void _navigateByRole(AppUser user) {
-    final destination = user.role == UserRole.admin
-        ? AdminDashboardScreen(token: user.token)
-        : HomeScreen(token: user.token);
+    Widget destination;
+    if (user.role == UserRole.superAdmin) {
+      destination = const SuperAdminScreen();
+    } else if (user.role == UserRole.admin) {
+      destination = AdminDashboardScreen(token: user.token);
+    } else {
+      destination = HomeScreen(token: user.token);
+    }
 
     Navigator.pushAndRemoveUntil(
       context,
@@ -66,14 +72,14 @@ class _VerifyScreenState extends State<VerifyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Verify Identity')),
+      appBar: AppBar(title: const Text('Verificar Identidad')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'We sent a 6-digit code to ${widget.email}',
+              'Enviamos un código de 6 dígitos a ${widget.email}',
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
             const SizedBox(height: 20),
@@ -81,13 +87,13 @@ class _VerifyScreenState extends State<VerifyScreen> {
               controller: _codeController,
               keyboardType: TextInputType.number,
               decoration:
-                  const InputDecoration(hintText: 'Enter 6-digit code'),
+                  const InputDecoration(hintText: 'Ingresa el código de 6 dígitos'),
             ),
             const SizedBox(height: 40),
             LoadingButton(
               isLoading: _isLoading,
               onPressed: _handleVerify,
-              label: 'Verify and Enter App',
+              label: 'Verificar e Ingresar',
             ),
           ],
         ),

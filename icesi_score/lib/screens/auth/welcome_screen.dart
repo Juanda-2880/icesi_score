@@ -42,12 +42,12 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Universidad Icesi Sports Platform',
+                'Plataforma Deportiva Universidad Icesi',
                 style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
               const SizedBox(height: 10),
               const Text(
-                'Track - Predict - Win',
+                'Sigue - Predice - Gana',
                 style: TextStyle(color: Colors.orangeAccent, fontSize: 14),
               ),
               const Spacer(),
@@ -56,7 +56,7 @@ class WelcomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 ),
-                child: const Text('Log In'),
+                child: const Text('Iniciar Sesión'),
               ),
               const SizedBox(height: 16),
               OutlinedButton(
@@ -72,7 +72,7 @@ class WelcomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const RegisterScreen()),
                 ),
                 child: const Text(
-                  'Create Account',
+                  'Crear Cuenta',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -82,13 +82,13 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 40),
               const Text(
-                'Are you a university administrator?',
+                '¿Eres un administrador universitario?',
                 style: TextStyle(color: Colors.grey),
               ),
               TextButton(
                 onPressed: () {},
                 child: const Text(
-                  'Log in with Icesi SSO',
+                  'Inicia sesión con Icesi SSO',
                   style: TextStyle(color: Color(0xFF5C5CFF)),
                 ),
               ),
