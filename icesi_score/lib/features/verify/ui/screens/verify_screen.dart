@@ -8,39 +8,35 @@ import '../bloc/verify_bloc.dart';
 import '../bloc/verify_event.dart';
 import '../bloc/verify_state.dart';
 
-class VerifyScreen extends StatelessWidget {
+class VerifyScreen extends StatefulWidget {
   const VerifyScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final email =
-        ModalRoute.of(context)?.settings.arguments as String? ?? '';
-
-    return BlocProvider(
-      create: (_) => VerifyBloc(
-        ConfirmSignUpUseCase(
-          AuthRepositoryImpl(CognitoAuthDataSource()),
-        ),
-      ),
-      child: _VerifyView(email: email),
-    );
-  }
+  State<VerifyScreen> createState() => _VerifyScreenState();
 }
 
-class _VerifyView extends StatefulWidget {
-  final String email;
-
-  const _VerifyView({required this.email});
-
-  @override
-  State<_VerifyView> createState() => _VerifyViewState();
-}
-
-class _VerifyViewState extends State<_VerifyView> {
+class _VerifyScreenState extends State<VerifyScreen> {
+  late final VerifyBloc _bloc;
+  late final String _email;
   final _codeController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _bloc = VerifyBloc(
+      ConfirmSignUpUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _email = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+  }
+
+  @override
   void dispose() {
+    _bloc.close();
     _codeController.dispose();
     super.dispose();
   }
@@ -51,9 +47,7 @@ class _VerifyViewState extends State<_VerifyView> {
       _showError('El código debe tener exactamente 6 dígitos.');
       return;
     }
-    context.read<VerifyBloc>().add(
-          VerifyCodeSubmittedEvent(email: widget.email, code: code),
-        );
+    _bloc.add(VerifyCodeSubmittedEvent(email: _email, code: code));
   }
 
   void _showError(String message) {
@@ -74,54 +68,57 @@ class _VerifyViewState extends State<_VerifyView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<VerifyBloc, VerifyState>(
-      listener: (context, state) {
-        if (state is VerifySuccessState) {
-          Navigator.pushReplacementNamed(context, '/login');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('¡Cuenta verificada con éxito! Ya puedes iniciar sesión.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else if (state is VerifyFailureState) {
-          _showError(state.errorMessage);
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Verify Identity')),
-        body: BlocBuilder<VerifyBloc, VerifyState>(
-          builder: (context, state) {
-            final isLoading = state is VerifyLoadingState;
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'We sent a 6-digit code to ${widget.email}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _codeController,
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter 6-digit code',
-                      counterText: '',
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  LoadingButton(
-                    isLoading: isLoading,
-                    onPressed: isLoading ? () {} : _submit,
-                    label: 'Verify and Enter App',
-                  ),
-                ],
+    return BlocProvider.value(
+      value: _bloc,
+      child: BlocListener<VerifyBloc, VerifyState>(
+        listener: (context, state) {
+          if (state is VerifySuccessState) {
+            Navigator.pushReplacementNamed(context, '/login');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('¡Cuenta verificada con éxito! Ya puedes iniciar sesión.'),
+                backgroundColor: Colors.green,
               ),
             );
-          },
+          } else if (state is VerifyFailureState) {
+            _showError(state.errorMessage);
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Verify Identity')),
+          body: BlocBuilder<VerifyBloc, VerifyState>(
+            builder: (context, state) {
+              final isLoading = state is VerifyLoadingState;
+              return Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'We sent a 6-digit code to $_email',
+                      style: const TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _codeController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter 6-digit code',
+                        counterText: '',
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    LoadingButton(
+                      isLoading: isLoading,
+                      onPressed: isLoading ? () {} : _submit,
+                      label: 'Verify and Enter App',
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

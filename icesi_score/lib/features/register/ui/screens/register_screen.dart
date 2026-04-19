@@ -9,30 +9,15 @@ import '../bloc/register_bloc.dart';
 import '../bloc/register_event.dart';
 import '../bloc/register_state.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => RegisterBloc(
-        SignUpUseCase(
-          AuthRepositoryImpl(CognitoAuthDataSource()),
-        ),
-      ),
-      child: const _RegisterView(),
-    );
-  }
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterView extends StatefulWidget {
-  const _RegisterView();
-
-  @override
-  State<_RegisterView> createState() => _RegisterViewState();
-}
-
-class _RegisterViewState extends State<_RegisterView> {
+class _RegisterScreenState extends State<RegisterScreen> {
+  late final RegisterBloc _bloc;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -42,7 +27,16 @@ class _RegisterViewState extends State<_RegisterView> {
   final _confirmPasswordController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _bloc = RegisterBloc(
+      SignUpUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+    );
+  }
+
+  @override
   void dispose() {
+    _bloc.close();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -54,18 +48,16 @@ class _RegisterViewState extends State<_RegisterView> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    context.read<RegisterBloc>().add(
-          RegisterSubmittedEvent(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-            fullName: _nameController.text.trim(),
-            phone: _phoneController.text.trim(),
-            university: _universityController.text.trim(),
-          ),
-        );
+    _bloc.add(RegisterSubmittedEvent(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+      fullName: _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      university: _universityController.text.trim(),
+    ));
   }
 
-  void _showError(BuildContext context, String message) {
+  void _showError(String message) {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
@@ -108,86 +100,89 @@ class _RegisterViewState extends State<_RegisterView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<RegisterBloc, RegisterState>(
-      listener: (context, state) {
-        if (state is RegisterSuccessState) {
-          Navigator.pushReplacementNamed(
-            context,
-            '/verify',
-            arguments: _emailController.text.trim(),
-          );
-        } else if (state is RegisterFailureState) {
-          _showError(context, state.errorMessage);
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Create Account')),
-        body: BlocBuilder<RegisterBloc, RegisterState>(
-          builder: (context, state) {
-            final isLoading = state is RegisterLoadingState;
-            return Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    LabeledTextField(
-                      label: 'Full Name',
-                      controller: _nameController,
-                      hint: 'Your full name',
-                      validator: (v) => _validateRequired(v, 'El nombre'),
-                    ),
-                    const SizedBox(height: 20),
-                    LabeledTextField(
-                      label: 'Email',
-                      controller: _emailController,
-                      hint: 'your.email@uicesi.edu.co',
-                      keyboardType: TextInputType.emailAddress,
-                      validator: _validateEmail,
-                    ),
-                    const SizedBox(height: 20),
-                    LabeledTextField(
-                      label: 'Phone',
-                      controller: _phoneController,
-                      hint: '+573001234567',
-                      keyboardType: TextInputType.phone,
-                      validator: (v) => _validateRequired(v, 'El teléfono'),
-                    ),
-                    const SizedBox(height: 20),
-                    LabeledTextField(
-                      label: 'University',
-                      controller: _universityController,
-                      hint: 'ICESI',
-                      validator: (v) => _validateRequired(v, 'La universidad'),
-                    ),
-                    const SizedBox(height: 20),
-                    LabeledTextField(
-                      label: 'Password',
-                      controller: _passwordController,
-                      hint: '••••••••',
-                      obscureText: true,
-                      validator: _validatePassword,
-                    ),
-                    const SizedBox(height: 20),
-                    LabeledTextField(
-                      label: 'Confirm Password',
-                      controller: _confirmPasswordController,
-                      hint: '••••••••',
-                      obscureText: true,
-                      validator: _validateConfirm,
-                    ),
-                    const SizedBox(height: 40),
-                    LoadingButton(
-                      isLoading: isLoading,
-                      onPressed: isLoading ? () {} : _submit,
-                      label: 'Create Account',
-                    ),
-                  ],
-                ),
-              ),
+    return BlocProvider.value(
+      value: _bloc,
+      child: BlocListener<RegisterBloc, RegisterState>(
+        listener: (context, state) {
+          if (state is RegisterSuccessState) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/verify',
+              arguments: _emailController.text.trim(),
             );
-          },
+          } else if (state is RegisterFailureState) {
+            _showError(state.errorMessage);
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Create Account')),
+          body: BlocBuilder<RegisterBloc, RegisterState>(
+            builder: (context, state) {
+              final isLoading = state is RegisterLoadingState;
+              return Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LabeledTextField(
+                        label: 'Full Name',
+                        controller: _nameController,
+                        hint: 'Your full name',
+                        validator: (v) => _validateRequired(v, 'El nombre'),
+                      ),
+                      const SizedBox(height: 20),
+                      LabeledTextField(
+                        label: 'Email',
+                        controller: _emailController,
+                        hint: 'your.email@uicesi.edu.co',
+                        keyboardType: TextInputType.emailAddress,
+                        validator: _validateEmail,
+                      ),
+                      const SizedBox(height: 20),
+                      LabeledTextField(
+                        label: 'Phone',
+                        controller: _phoneController,
+                        hint: '+573001234567',
+                        keyboardType: TextInputType.phone,
+                        validator: (v) => _validateRequired(v, 'El teléfono'),
+                      ),
+                      const SizedBox(height: 20),
+                      LabeledTextField(
+                        label: 'University',
+                        controller: _universityController,
+                        hint: 'ICESI',
+                        validator: (v) => _validateRequired(v, 'La universidad'),
+                      ),
+                      const SizedBox(height: 20),
+                      LabeledTextField(
+                        label: 'Password',
+                        controller: _passwordController,
+                        hint: '••••••••',
+                        obscureText: true,
+                        validator: _validatePassword,
+                      ),
+                      const SizedBox(height: 20),
+                      LabeledTextField(
+                        label: 'Confirm Password',
+                        controller: _confirmPasswordController,
+                        hint: '••••••••',
+                        obscureText: true,
+                        validator: _validateConfirm,
+                      ),
+                      const SizedBox(height: 40),
+                      LoadingButton(
+                        isLoading: isLoading,
+                        onPressed: isLoading ? () {} : _submit,
+                        label: 'Create Account',
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
