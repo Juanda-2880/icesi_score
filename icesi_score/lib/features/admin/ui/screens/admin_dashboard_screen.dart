@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../../services/auth_service.dart';
+import '../../../auth/data/repository/auth_repository_impl.dart';
+import '../../../auth/data/source/cognito_auth_data_source.dart';
+import '../../../auth/domain/entities/auth_user.dart';
 import '../../../login/ui/screens/welcome_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
-  final String token;
+  final AuthUser user;
 
-  const AdminDashboardScreen({super.key, required this.token});
+  const AdminDashboardScreen({super.key, required this.user});
 
   Future<void> _handleSignOut(BuildContext context) async {
     try {
-      await AuthService.signOut();
+      await AuthRepositoryImpl(CognitoAuthDataSource()).signOut();
       if (context.mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const WelcomeScreen()),
           (route) => false,
         );
@@ -21,7 +22,7 @@ class AdminDashboardScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cerrar sesion: $e'),
+            content: Text('Error al cerrar sesión: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -34,14 +35,14 @@ class AdminDashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Admin Panel',
+          'Panel de Administrador',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.orange.shade800,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Cerrar Sesion',
+            tooltip: 'Cerrar Sesión',
             onPressed: () => _handleSignOut(context),
           ),
         ],
@@ -57,33 +58,28 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              'Panel de Control',
+              'Panel de Administrador',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 10),
-            const Text(
-              'Tienes permisos para modificar el torneo.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+            const SizedBox(height: 12),
+            Text(
+              user.fullName.isNotEmpty ? user.fullName : user.email,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
-            const SizedBox(height: 30),
-            ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Falta conectar con la Lambda y API Gateway'),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.person_add),
-              label: const Text('Hacer Admin a un usuario'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange.shade700,
-                foregroundColor: Colors.white,
+            const SizedBox(height: 12),
+            Chip(
+              label: Text(
+                user.role,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+              backgroundColor: Colors.orange.shade700,
             ),
           ],
         ),

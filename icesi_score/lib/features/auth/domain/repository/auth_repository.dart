@@ -20,4 +20,8 @@ abstract class AuthRepository {
   });
 
   Future<void> signOut();
+
+  Future<AuthUser?> getStoredSession();
+
+  Future<void> clearSession();
 }

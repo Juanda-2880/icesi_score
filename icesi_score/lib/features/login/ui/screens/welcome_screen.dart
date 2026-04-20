@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
-import '../../../register/ui/screens/register_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -52,11 +50,8 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const Spacer(),
               ElevatedButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                ),
-                child: const Text('Log In'),
+                onPressed: () => Navigator.pushNamed(context, '/login'),
+                child: const Text('Iniciar Sesión'),
               ),
               const SizedBox(height: 16),
               OutlinedButton(
@@ -67,12 +62,9 @@ class WelcomeScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                ),
+                onPressed: () => Navigator.pushNamed(context, '/register'),
                 child: const Text(
-                  'Create Account',
+                  'Registrarse',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:amplify_flutter/amplify_flutter.dart';
-import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
-import 'amplifyconfiguration.dart';
+import 'package:amplify_flutter/amplify_flutter.dart' hide AuthUser;
+import 'package:amplify_auth_cognito/amplify_auth_cognito.dart' hide AuthUser;
+import 'amplifyconfiguration.dart' show amplifyconfig;
 import 'theme/app_theme.dart';
-import 'models/app_user.dart';
-import 'services/auth_service.dart';
+import 'features/auth/data/repository/auth_repository_impl.dart';
+import 'features/auth/data/source/cognito_auth_data_source.dart';
+import 'features/auth/domain/entities/auth_user.dart';
+import 'features/auth/domain/usecases/get_stored_session_usecase.dart';
 import 'features/login/ui/screens/welcome_screen.dart';
 import 'features/login/ui/screens/login_screen.dart';
 import 'features/register/ui/screens/register_screen.dart';
@@ -13,6 +15,7 @@ import 'features/home/ui/screens/home_screen.dart';
 import 'features/admin/ui/screens/admin_dashboard_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const IcesiScoreApp());
 }
 
@@ -24,34 +27,36 @@ class IcesiScoreApp extends StatefulWidget {
 }
 
 class _IcesiScoreAppState extends State<IcesiScoreApp> {
-  bool _isLoading = true;
-  Widget? _initialScreen;
+  late final Future<AuthUser?> _sessionFuture;
 
   @override
   void initState() {
     super.initState();
-    _initializeApp();
+    _sessionFuture = _initApp();
   }
 
-  Future<void> _initializeApp() async {
-    try {
-      await Amplify.addPlugin(AmplifyAuthCognito());
-      await Amplify.configure(amplifyconfig);
+  Future<AuthUser?> _initApp() async {
+    await Amplify.addPlugin(AmplifyAuthCognito());
+    await Amplify.configure(amplifyconfig);
+    return GetStoredSessionUseCase(
+      AuthRepositoryImpl(CognitoAuthDataSource()),
+    )();
+  }
 
-      final AppUser? user = await AuthService.checkExistingSession();
+  Widget _buildSplash() {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(color: AppTheme.primaryColor),
+      ),
+    );
+  }
 
-      if (user != null) {
-        _initialScreen = user.role == UserRole.admin
-            ? AdminDashboardScreen(token: user.token)
-            : HomeScreen(token: user.token);
-      } else {
-        _initialScreen = const WelcomeScreen();
-      }
-    } catch (e) {
-      _initialScreen = const WelcomeScreen();
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+  Widget _resolveHome(AuthUser? user) {
+    if (user == null) return const WelcomeScreen();
+    if (user.role == 'ADMIN' || user.role == 'SUPERADMIN') {
+      return AdminDashboardScreen(user: user);
     }
+    return HomeScreen(user: user);
   }
 
   @override
@@ -60,19 +65,32 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
       title: 'IcesiScore',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      // Rutas nombradas usadas por register → verify → login
       routes: {
         '/login':    (_) => const LoginScreen(),
         '/register': (_) => const RegisterScreen(),
         '/verify':   (_) => const VerifyScreen(),
+        '/routing': (ctx) {
+          final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
+          return _resolveHome(user);
+        },
+        '/home': (ctx) {
+          final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
+          return HomeScreen(user: user);
+        },
+        '/admin': (ctx) {
+          final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
+          return AdminDashboardScreen(user: user);
+        },
       },
-      home: _isLoading
-          ? const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryColor),
-              ),
-            )
-          : _initialScreen,
+      home: FutureBuilder<AuthUser?>(
+        future: _sessionFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return _buildSplash();
+          }
+          return _resolveHome(snapshot.data);
+        },
+      ),
     );
   }
 }

@@ -79,9 +79,10 @@ cd infrastructure && terraform init && cd ..
 ```bash
 make db-up DB_PASSWORD=tu_password
 ```
-Esto detecta tu IP pública automáticamente y hace `terraform apply`.  
+Esto empaqueta las Lambdas automáticamente, detecta tu IP pública y hace `terraform apply`.  
 La RDS quedará accesible **solo desde tu IP** mientras trabajas.  
 Escribe `yes` para confirmar.
+
 
 #### 4. Aplicar el schema de base de datos
 ```bash

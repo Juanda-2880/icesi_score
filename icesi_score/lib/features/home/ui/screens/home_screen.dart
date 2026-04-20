@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../../services/auth_service.dart';
+import '../../../auth/data/repository/auth_repository_impl.dart';
+import '../../../auth/data/source/cognito_auth_data_source.dart';
+import '../../../auth/domain/entities/auth_user.dart';
 import '../../../login/ui/screens/welcome_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  final String token;
+  final AuthUser user;
 
-  const HomeScreen({super.key, required this.token});
+  const HomeScreen({super.key, required this.user});
 
   Future<void> _handleSignOut(BuildContext context) async {
     try {
-      await AuthService.signOut();
+      await AuthRepositoryImpl(CognitoAuthDataSource()).signOut();
       if (context.mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const WelcomeScreen()),
           (route) => false,
         );
@@ -21,7 +22,7 @@ class HomeScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cerrar sesion: $e'),
+            content: Text('Error al cerrar sesión: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -40,7 +41,7 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Cerrar Sesion',
+            tooltip: 'Cerrar Sesión',
             onPressed: () => _handleSignOut(context),
           ),
         ],
@@ -51,27 +52,30 @@ class HomeScreen extends StatelessWidget {
           children: [
             const Icon(Icons.sports_soccer, size: 80, color: Color(0xFF5C5CFF)),
             const SizedBox(height: 20),
-            const Text(
-              'Bienvenido Estudiante!',
-              style: TextStyle(
-                fontSize: 24,
+            Text(
+              'Bienvenido, ${user.fullName.isNotEmpty ? user.fullName : user.email}',
+              style: const TextStyle(
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 10),
-            const Text(
-              'Aqui veras los partidos de la U pronto.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 30),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'Tu Token JWT:\n${token.substring(0, 30)}...',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+            const SizedBox(height: 12),
+            Chip(
+              label: Text(
+                user.role,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+              backgroundColor: const Color(0xFF5C5CFF),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Aquí verás los partidos de la U pronto.',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
         ),

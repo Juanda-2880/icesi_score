@@ -85,20 +85,19 @@ class CognitoAuthDataSource {
           .value;
 
       return {'userId': sub, 'email': email};
-    } on UserNotFoundException {
-      throw const AuthException('No existe una cuenta con ese correo electrónico.');
+    } on InvalidStateException {
+      await Amplify.Auth.signOut();
+      throw const AuthException('Sesión detectada. Por favor, inténtelo otra vez.');
     } on UserNotConfirmedException {
       throw const AuthException('La cuenta no ha sido verificada. Revisa tu correo.');
-    } on AuthException catch (e) {
-      // NotAuthorizedException no está exportado en v1.6; llega como AuthException
-      // con "Incorrect username or password" o "NotAuthorized" en el mensaje.
-      final msg = e.message.toLowerCase();
-      if (msg.contains('incorrect') || msg.contains('notauthorized') || msg.contains('not authorized')) {
-        throw const AuthException('Correo o contraseña incorrectos.');
-      }
-      rethrow;
+    } on UserNotFoundException {
+      throw const AuthException('Acceso inválido. Por favor, inténtelo otra vez.');
+    } on NotAuthorizedServiceException {
+      throw const AuthException('Acceso inválido. Por favor, inténtelo otra vez.');
+    } on AuthException {
+      throw const AuthException('Acceso inválido. Por favor, inténtelo otra vez.');
     } on Exception catch (e) {
-      throw AuthException('Error al iniciar sesión: $e');
+      throw AuthException('Error de conexión. Verifica tu red e inténtalo de nuevo.');
     }
   }
 

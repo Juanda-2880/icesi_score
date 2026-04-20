@@ -1,25 +1,29 @@
 import '../../domain/entities/auth_user.dart';
 import '../../domain/repository/auth_repository.dart';
 import '../source/cognito_auth_data_source.dart';
+import '../source/secure_storage_data_source.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  final CognitoAuthDataSource _dataSource;
+  final CognitoAuthDataSource _cognito;
+  final SecureStorageDataSource _storage;
 
-  const AuthRepositoryImpl(this._dataSource);
+  AuthRepositoryImpl(this._cognito, [SecureStorageDataSource? storage])
+      : _storage = storage ?? SecureStorageDataSource();
 
   @override
   Future<AuthUser> signIn({
     required String email,
     required String password,
   }) async {
-    final data = await _dataSource.signIn(email: email, password: password);
-    // role='NORMAL' provisional; el rol real se sincroniza con RDS tras el login
-    return AuthUser(
+    final data = await _cognito.signIn(email: email, password: password);
+    final user = AuthUser(
       id: data['userId']!,
       email: data['email']!,
       fullName: '',
       role: 'NORMAL',
     );
+    await _storage.saveSession(user);
+    return user;
   }
 
   @override
@@ -30,7 +34,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String phone,
     required String university,
   }) =>
-      _dataSource.signUp(
+      _cognito.signUp(
         email: email,
         password: password,
         fullName: fullName,
@@ -43,8 +47,17 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String code,
   }) =>
-      _dataSource.confirmSignUp(email: email, code: code);
+      _cognito.confirmSignUp(email: email, code: code);
 
   @override
-  Future<void> signOut() => _dataSource.signOut();
+  Future<void> signOut() async {
+    await _cognito.signOut();
+    await _storage.clearSession();
+  }
+
+  @override
+  Future<AuthUser?> getStoredSession() => _storage.getSession();
+
+  @override
+  Future<void> clearSession() => _storage.clearSession();
 }
