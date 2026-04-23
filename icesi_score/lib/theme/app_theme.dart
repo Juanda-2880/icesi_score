@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static const Color bgColor = Color(0xFF1A1A1A); // Gris oscuro casi negro
-  static const Color primaryColor = Color(
-    0xFF5C5CFF,
-  ); // Púrpura/Índigo del botón
+  static const Color primaryColor = Color(0xFF4343D8); // Azul principal
   static const Color surfaceColor = Color(
     0xFF2C2C2C,
   ); // Gris para tarjetas/inputs

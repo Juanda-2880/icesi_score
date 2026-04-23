@@ -61,8 +61,8 @@ class CognitoAuthDataSource {
     }
   }
 
-  // Returns {userId, email} on success.
-  Future<Map<String, String>> signIn({
+  // Returns {userId, email, fullName, phone, university} on success.
+  Future<Map<String, String?>> signIn({
     required String email,
     required String password,
   }) async {
@@ -77,14 +77,24 @@ class CognitoAuthDataSource {
       }
 
       final attributes = await Amplify.Auth.fetchUserAttributes();
-      final sub = attributes
-          .firstWhere(
-            (a) => a.userAttributeKey == CognitoUserAttributeKey.sub,
-            orElse: () => throw const AuthException('No se encontró el identificador de usuario.'),
-          )
-          .value;
 
-      return {'userId': sub, 'email': email};
+      String? findAttr(AuthUserAttributeKey key) {
+        final matches = attributes.where((a) => a.userAttributeKey == key);
+        return matches.isEmpty ? null : matches.first.value;
+      }
+
+      final sub = findAttr(CognitoUserAttributeKey.sub);
+      if (sub == null || sub.isEmpty) {
+        throw const AuthException('No se encontró el identificador de usuario.');
+      }
+
+      return {
+        'userId': sub,
+        'email': email,
+        'fullName': findAttr(CognitoUserAttributeKey.name),
+        'phone': findAttr(CognitoUserAttributeKey.phoneNumber),
+        'university': findAttr(const CognitoUserAttributeKey.custom('university')),
+      };
     } on InvalidStateException {
       await Amplify.Auth.signOut();
       throw const AuthException('Sesión detectada. Por favor, inténtelo otra vez.');
@@ -103,9 +113,25 @@ class CognitoAuthDataSource {
 
   Future<void> signOut() async {
     try {
-      await Amplify.Auth.signOut();
+      await Amplify.Auth.signOut(
+        options: const SignOutOptions(globalSignOut: true),
+      );
     } on Exception catch (e) {
       throw AuthException('Error al cerrar sesión: $e');
     }
+  }
+
+  Future<bool> isSessionValid() async {
+    try {
+      final session = await Amplify.Auth.fetchAuthSession();
+      return session.isSignedIn;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<String> getIdToken() async {
+    final session = await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
+    return session.userPoolTokensResult.value.idToken.raw;
   }
 }

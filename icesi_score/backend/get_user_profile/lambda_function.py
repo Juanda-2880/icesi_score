@@ -33,7 +33,7 @@ def _response(status: int, body: dict) -> dict:
 
 def handler(event, _context):
     try:
-        user_sub = event["requestContext"]["authorizer"]["claims"]["sub"]
+        user_sub = event["requestContext"]["authorizer"]["jwt"]["claims"]["sub"]
     except KeyError:
         return _response(401, {"error": "Token inválido o expirado"})
 

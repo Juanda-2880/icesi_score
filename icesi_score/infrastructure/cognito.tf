@@ -92,6 +92,8 @@ resource "local_file" "amplify_config_dart" {
 
   filename = "../lib/amplifyconfiguration.dart"
   content = <<-EOT
+const apiBaseUrl = '${aws_apigatewayv2_api.icesi_api.api_endpoint}';
+
 const amplifyconfig = ''' {
     "UserAgent": "aws-amplify-cli/2.0",
     "Version": "1.0",

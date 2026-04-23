@@ -2,28 +2,37 @@ import '../../domain/entities/auth_user.dart';
 import '../../domain/repository/auth_repository.dart';
 import '../source/cognito_auth_data_source.dart';
 import '../source/secure_storage_data_source.dart';
+import '../source/user_profile_api_data_source.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final CognitoAuthDataSource _cognito;
   final SecureStorageDataSource _storage;
+  final UserProfileApiDataSource _profileApi;
 
-  AuthRepositoryImpl(this._cognito, [SecureStorageDataSource? storage])
-      : _storage = storage ?? SecureStorageDataSource();
+  AuthRepositoryImpl(
+    this._cognito, [
+    SecureStorageDataSource? storage,
+    UserProfileApiDataSource? profileApi,
+  ])  : _storage = storage ?? SecureStorageDataSource(),
+        _profileApi = profileApi ?? UserProfileApiDataSource();
 
   @override
   Future<AuthUser> signIn({
     required String email,
     required String password,
   }) async {
-    final data = await _cognito.signIn(email: email, password: password);
-    final user = AuthUser(
-      id: data['userId']!,
-      email: data['email']!,
-      fullName: '',
-      role: 'NORMAL',
-    );
-    await _storage.saveSession(user);
-    return user;
+    try {
+      await _cognito.signIn(email: email, password: password);
+      final idToken = await _cognito.getIdToken();
+      final user = await _profileApi.fetchProfile(idToken);
+      await _storage.saveSession(user);
+      return user;
+    } on AuthException {
+      rethrow;
+    } on Exception {
+      try { await _cognito.signOut(); } catch (_) {}
+      throw const AuthException('No se pudo obtener el perfil del usuario. Intenta de nuevo.');
+    }
   }
 
   @override
@@ -56,7 +65,14 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<AuthUser?> getStoredSession() => _storage.getSession();
+  Future<AuthUser?> getStoredSession() async {
+    final valid = await _cognito.isSessionValid();
+    if (!valid) {
+      await _storage.clearSession();
+      return null;
+    }
+    return _storage.getSession();
+  }
 
   @override
   Future<void> clearSession() => _storage.clearSession();

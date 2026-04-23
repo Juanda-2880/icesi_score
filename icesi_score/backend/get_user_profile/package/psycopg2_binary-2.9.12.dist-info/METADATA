@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: psycopg2-binary
-Version: 2.9.11
+Version: 2.9.12
 Summary: psycopg2 - Python-PostgreSQL Database Adapter
 Home-page: https://psycopg.org/
 Author: Federico Di Gregorio

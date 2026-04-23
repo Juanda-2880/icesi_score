@@ -5,6 +5,7 @@ import '../../../auth/data/source/cognito_auth_data_source.dart';
 import '../../../auth/domain/usecases/sign_in_usecase.dart';
 import '../../../../widgets/common/labeled_text_field.dart';
 import '../../../../widgets/common/loading_button.dart';
+import '../../../session/session_cubit.dart';
 import '../bloc/login_bloc.dart';
 import '../bloc/login_event.dart';
 import '../bloc/login_state.dart';
@@ -82,6 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: BlocListener<LoginBloc, LoginState>(
         listener: (context, state) {
           if (state is LoginSuccessState) {
+            context.read<SessionCubit>().setUser(state.user);
             Navigator.pushNamedAndRemoveUntil(
               context,
               '/routing',

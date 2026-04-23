@@ -59,6 +59,13 @@ resource "aws_apigatewayv2_api" "icesi_api" {
   }
 }
 
+# 5b. Stage $default con auto-deploy — sin esto los routes no se despliegan
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.icesi_api.id
+  name        = "$default"
+  auto_deploy = true
+}
+
 # 6. Conectar Cognito como Autorizador del API Gateway
 resource "aws_apigatewayv2_authorizer" "cognito_auth" {
   api_id           = aws_apigatewayv2_api.icesi_api.id

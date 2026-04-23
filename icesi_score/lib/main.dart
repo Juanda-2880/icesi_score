@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:amplify_flutter/amplify_flutter.dart' hide AuthUser;
 import 'package:amplify_auth_cognito/amplify_auth_cognito.dart' hide AuthUser;
 import 'amplifyconfiguration.dart' show amplifyconfig;
@@ -13,6 +14,10 @@ import 'features/register/ui/screens/register_screen.dart';
 import 'features/verify/ui/screens/verify_screen.dart';
 import 'features/home/ui/screens/home_screen.dart';
 import 'features/admin/ui/screens/admin_dashboard_screen.dart';
+import 'features/auth/domain/usecases/sign_out_usecase.dart';
+import 'features/profile/ui/bloc/logout_bloc.dart';
+import 'features/profile/ui/screens/profile_screen.dart';
+import 'features/session/session_cubit.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,16 +48,7 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
     )();
   }
 
-  Widget _buildSplash() {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(color: AppTheme.primaryColor),
-      ),
-    );
-  }
-
-  Widget _resolveHome(AuthUser? user) {
-    if (user == null) return const WelcomeScreen();
+  Widget _resolveHome(AuthUser user) {
     if (user.role == 'ADMIN' || user.role == 'SUPERADMIN') {
       return AdminDashboardScreen(user: user);
     }
@@ -61,35 +57,74 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'IcesiScore',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      routes: {
-        '/login':    (_) => const LoginScreen(),
-        '/register': (_) => const RegisterScreen(),
-        '/verify':   (_) => const VerifyScreen(),
-        '/routing': (ctx) {
-          final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
-          return _resolveHome(user);
+    return BlocProvider<SessionCubit>(
+      create: (_) => SessionCubit(),
+      child: MaterialApp(
+        title: 'IcesiScore',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
+        routes: {
+          '/welcome':  (_) => const WelcomeScreen(),
+          '/login':    (_) => const LoginScreen(),
+          '/register': (_) => const RegisterScreen(),
+          '/verify':   (_) => const VerifyScreen(),
+          '/routing': (ctx) {
+            final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
+            return _resolveHome(user);
+          },
+          '/home': (ctx) {
+            final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
+            return HomeScreen(user: user);
+          },
+          '/admin': (ctx) {
+            final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
+            return AdminDashboardScreen(user: user);
+          },
+          '/profile': (_) => BlocProvider(
+            create: (_) => LogoutBloc(
+              SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+            ),
+            child: const ProfileScreen(),
+          ),
         },
-        '/home': (ctx) {
-          final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
-          return HomeScreen(user: user);
-        },
-        '/admin': (ctx) {
-          final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
-          return AdminDashboardScreen(user: user);
-        },
-      },
-      home: FutureBuilder<AuthUser?>(
-        future: _sessionFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return _buildSplash();
-          }
-          return _resolveHome(snapshot.data);
-        },
+        home: _SplashRouter(sessionFuture: _sessionFuture),
+      ),
+    );
+  }
+}
+
+class _SplashRouter extends StatefulWidget {
+  final Future<AuthUser?> sessionFuture;
+
+  const _SplashRouter({required this.sessionFuture});
+
+  @override
+  State<_SplashRouter> createState() => _SplashRouterState();
+}
+
+class _SplashRouterState extends State<_SplashRouter> {
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    final user = await widget.sessionFuture;
+    if (!mounted) return;
+    if (user != null) {
+      context.read<SessionCubit>().setUser(user);
+      Navigator.pushReplacementNamed(context, '/routing', arguments: user);
+    } else {
+      Navigator.pushReplacementNamed(context, '/welcome');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(color: AppTheme.primaryColor),
       ),
     );
   }
