@@ -14,8 +14,10 @@ import 'features/register/ui/screens/register_screen.dart';
 import 'features/verify/ui/screens/verify_screen.dart';
 import 'features/home/ui/screens/home_screen.dart';
 import 'features/admin/ui/screens/admin_dashboard_screen.dart';
+import 'features/auth/domain/usecases/delete_account_usecase.dart';
 import 'features/auth/domain/usecases/sign_out_usecase.dart';
 import 'features/auth/domain/usecases/update_profile_usecase.dart';
+import 'features/profile/ui/bloc/delete_bloc.dart';
 import 'features/profile/ui/bloc/logout_bloc.dart';
 import 'features/profile/ui/bloc/profile_bloc.dart';
 import 'features/profile/ui/screens/profile_screen.dart';
@@ -82,24 +84,35 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
             final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
             return AdminDashboardScreen(user: user);
           },
-          '/profile': (ctx) => MultiBlocProvider(
-            providers: [
-              BlocProvider(
-                create: (_) => LogoutBloc(
-                  SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
-                ),
-              ),
-              BlocProvider(
-                create: (_) => ProfileBloc(
-                  UpdateProfileUseCase(
-                    AuthRepositoryImpl(CognitoAuthDataSource()),
+          '/profile': (ctx) {
+            final userId = ctx.read<SessionCubit>().state!.id;
+            return MultiBlocProvider(
+              providers: [
+                BlocProvider(
+                  create: (_) => LogoutBloc(
+                    SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
                   ),
-                  ctx.read<SessionCubit>().state!.id,
                 ),
-              ),
-            ],
-            child: const ProfileScreen(),
-          ),
+                BlocProvider(
+                  create: (_) => ProfileBloc(
+                    UpdateProfileUseCase(
+                      AuthRepositoryImpl(CognitoAuthDataSource()),
+                    ),
+                    userId,
+                  ),
+                ),
+                BlocProvider(
+                  create: (_) => DeleteBloc(
+                    DeleteAccountUseCase(
+                      AuthRepositoryImpl(CognitoAuthDataSource()),
+                    ),
+                    userId,
+                  ),
+                ),
+              ],
+              child: const ProfileScreen(),
+            );
+          },
         },
         home: _SplashRouter(sessionFuture: _sessionFuture),
       ),

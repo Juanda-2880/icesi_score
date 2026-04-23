@@ -31,4 +31,6 @@ abstract class AuthRepository {
     required String phone,
     required String university,
   });
+
+  Future<void> deleteAccount({required String id});
 }

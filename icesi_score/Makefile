@@ -1,4 +1,4 @@
-.PHONY: db-up db-migrate db-seed db-connect db-down venv lambda-build profile-build update-profile-build
+.PHONY: db-up db-migrate db-seed db-connect db-down venv lambda-build profile-build update-profile-build delete-user-build
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -71,9 +71,24 @@ update-profile-build: venv
 	 echo "✓ Paquete Lambda listo en $$PKG"
 
 # ---------------------------------------------------------------------------
+# delete-user-build — empaqueta delete_user con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+delete-user-build: venv
+	@PKG="backend/delete_user/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/delete_user/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
 # db-up — abre acceso público temporal desde la IP del desarrollador
 # ---------------------------------------------------------------------------
-db-up: lambda-build profile-build update-profile-build
+db-up: lambda-build profile-build update-profile-build delete-user-build
 	@echo "Obteniendo IP pública…"
 	@MY_IP=$$(curl -s https://ifconfig.me) && \
 	 echo "IP detectada: $$MY_IP" && \

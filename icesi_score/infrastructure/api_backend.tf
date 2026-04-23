@@ -54,7 +54,7 @@ resource "aws_apigatewayv2_api" "icesi_api" {
   protocol_type = "HTTP"
   cors_configuration {
     allow_origins = ["*"]
-    allow_methods = ["POST", "GET", "PUT", "OPTIONS"]
+    allow_methods = ["POST", "GET", "PUT", "DELETE", "OPTIONS"]
     allow_headers = ["Content-Type", "Authorization"]
   }
 }

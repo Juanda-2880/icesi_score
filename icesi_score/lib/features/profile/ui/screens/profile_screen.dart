@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../auth/domain/entities/auth_user.dart';
 import '../../../session/session_cubit.dart';
+import '../bloc/delete_bloc.dart';
+import '../bloc/delete_event.dart';
+import '../bloc/delete_state.dart';
 import '../bloc/logout_bloc.dart';
 import '../bloc/logout_event.dart';
 import '../bloc/logout_state.dart';
@@ -24,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final TextEditingController _universityController;
 
   bool _isLoadingDialogOpen = false;
+  bool _isDeleteDialogOpen  = false;
 
   static const Color _blue    = Color(0xFF4343D8);
   static const Color _orange  = Color(0xFFF1A25D);
@@ -66,7 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            'Perfil actualizado ✓',
+            'Perfil actualizado',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
           ),
           backgroundColor: _blue,
@@ -132,12 +136,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _onDeleteState(BuildContext context, DeleteState state) {
+    if (state is DeletingState && !_isDeleteDialogOpen) {
+      _isDeleteDialogOpen = true;
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const PopScope(
+          canPop: false,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ).whenComplete(() => _isDeleteDialogOpen = false);
+    } else if (state is DeleteSuccessState) {
+      if (_isDeleteDialogOpen) {
+        Navigator.of(context).pop();
+        _isDeleteDialogOpen = false;
+      }
+      context.read<SessionCubit>().clearUser();
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Cuenta eliminada.',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: _red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } else if (state is DeleteFailureState) {
+      if (_isDeleteDialogOpen) {
+        Navigator.of(context).pop();
+        _isDeleteDialogOpen = false;
+      }
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Error al eliminar'),
+          content: Text(state.errorMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
         BlocListener<LogoutBloc, LogoutState>(listener: _onLogoutState),
         BlocListener<ProfileBloc, ProfileState>(listener: _onProfileState),
+        BlocListener<DeleteBloc, DeleteState>(listener: _onDeleteState),
       ],
       child: Scaffold(
           backgroundColor: _bgColor,
@@ -371,20 +428,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: () => showDialog<void>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Text('Delete Account'),
+                backgroundColor: const Color(0xFF1E1E1E),
+                title: const Text(
+                  '¿Eliminar cuenta?',
+                  style: TextStyle(
+                    color: _red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 content: const Text(
-                  '¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.',
+                  'Esta acción es permanente y no se puede deshacer.',
+                  style: TextStyle(color: Colors.white70),
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('Cancelar'),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.grey),
+                    ),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      context.read<DeleteBloc>().add(
+                            const DeleteAccountRequestedEvent(),
+                          );
+                    },
                     child: const Text(
                       'Eliminar',
-                      style: TextStyle(color: _red),
+                      style: TextStyle(
+                        color: _red,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],

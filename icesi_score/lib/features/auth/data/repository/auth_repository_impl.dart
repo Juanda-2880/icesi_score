@@ -78,6 +78,23 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> clearSession() => _storage.clearSession();
 
   @override
+  Future<void> deleteAccount({required String id}) async {
+    // Step 1: delete DB record via Lambda (Lambda is in VPC — can reach RDS but not Cognito)
+    try {
+      final idToken = await _cognito.getIdToken();
+      await _profileApi.deleteAccount(idToken: idToken);
+    } on AuthException {
+      rethrow;
+    } on Exception {
+      throw const AuthException('No se pudo eliminar la cuenta. Intenta de nuevo.');
+    }
+    // Step 2: delete Cognito user from client side (uses the user's own access token)
+    // This also signs the user out automatically.
+    await _cognito.deleteUser();
+    await _storage.clearSession();
+  }
+
+  @override
   Future<AuthUser> updateProfile({
     required String id,
     required String fullName,

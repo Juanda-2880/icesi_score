@@ -52,6 +52,17 @@ class UserProfileApiDataSource {
     throw Exception('Error al actualizar el perfil (${response.statusCode}).');
   }
 
+  Future<void> deleteAccount({required String idToken}) async {
+    final response = await _client.delete(
+      Uri.parse('$_kApiBase/user'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Error al eliminar la cuenta (${response.statusCode}).');
+    }
+  }
+
   AuthUser _parseUser(String responseBody) {
     final body = jsonDecode(responseBody) as Map<String, dynamic>;
     return AuthUser(

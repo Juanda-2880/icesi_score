@@ -134,4 +134,15 @@ class CognitoAuthDataSource {
     final session = await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
     return session.userPoolTokensResult.value.idToken.raw;
   }
+
+  // Deletes the current Cognito user and signs them out automatically.
+  Future<void> deleteUser() async {
+    try {
+      await Amplify.Auth.deleteUser();
+    } on AuthException catch (e) {
+      throw AuthException('Error al eliminar la cuenta de Cognito: ${e.message}');
+    } on Exception catch (e) {
+      throw AuthException('Error al eliminar la cuenta: $e');
+    }
+  }
 }
