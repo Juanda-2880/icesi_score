@@ -24,4 +24,11 @@ abstract class AuthRepository {
   Future<AuthUser?> getStoredSession();
 
   Future<void> clearSession();
+
+  Future<AuthUser> updateProfile({
+    required String id,
+    required String fullName,
+    required String phone,
+    required String university,
+  });
 }

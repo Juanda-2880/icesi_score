@@ -76,4 +76,29 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> clearSession() => _storage.clearSession();
+
+  @override
+  Future<AuthUser> updateProfile({
+    required String id,
+    required String fullName,
+    required String phone,
+    required String university,
+  }) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      final user = await _profileApi.updateProfile(
+        idToken: idToken,
+        id: id,
+        fullName: fullName,
+        phone: phone,
+        university: university,
+      );
+      await _storage.saveSession(user);
+      return user;
+    } on AuthException {
+      rethrow;
+    } on Exception {
+      throw const AuthException('No se pudo actualizar el perfil. Intenta de nuevo.');
+    }
+  }
 }

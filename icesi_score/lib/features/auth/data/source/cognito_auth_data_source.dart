@@ -106,7 +106,7 @@ class CognitoAuthDataSource {
       throw const AuthException('Acceso inválido. Por favor, inténtelo otra vez.');
     } on AuthException {
       throw const AuthException('Acceso inválido. Por favor, inténtelo otra vez.');
-    } on Exception catch (e) {
+    } on Exception {
       throw AuthException('Error de conexión. Verifica tu red e inténtalo de nuevo.');
     }
   }

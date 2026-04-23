@@ -5,6 +5,9 @@ import '../../../session/session_cubit.dart';
 import '../bloc/logout_bloc.dart';
 import '../bloc/logout_event.dart';
 import '../bloc/logout_state.dart';
+import '../bloc/profile_bloc.dart';
+import '../bloc/profile_event.dart';
+import '../bloc/profile_state.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,7 +17,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late final AuthUser _user;
+  late AuthUser _user;
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
@@ -51,6 +54,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _phoneController.dispose();
     _universityController.dispose();
     super.dispose();
+  }
+
+  void _onProfileState(BuildContext context, ProfileState state) {
+    if (state is ProfileSavedState) {
+      setState(() => _user = state.user);
+      context.read<SessionCubit>().setUser(state.user);
+      _nameController.text       = state.user.fullName;
+      _phoneController.text      = state.user.phone ?? '';
+      _universityController.text = state.user.university ?? '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Perfil actualizado ✓',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: _blue,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } else if (state is ProfileSaveFailureState) {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Error al guardar'),
+          content: Text(state.errorMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _onLogoutState(BuildContext context, LogoutState state) {
@@ -94,8 +134,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<LogoutBloc, LogoutState>(
-      listener: _onLogoutState,
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<LogoutBloc, LogoutState>(listener: _onLogoutState),
+        BlocListener<ProfileBloc, ProfileState>(listener: _onProfileState),
+      ],
       child: Scaffold(
           backgroundColor: _bgColor,
           appBar: AppBar(
@@ -150,27 +193,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 24),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _blue,
-                      minimumSize: const Size(double.infinity, 55),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Función próximamente')),
+                  child: BlocBuilder<ProfileBloc, ProfileState>(
+                    builder: (ctx, state) {
+                      final isSaving = state is ProfileSavingState;
+                      return ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _blue,
+                          minimumSize: const Size(double.infinity, 55),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: isSaving
+                            ? null
+                            : () {
+                                final newName  = _nameController.text.trim();
+                                final newPhone = _phoneController.text.trim();
+                                final newUniv  = _universityController.text.trim();
+                                final hasChanges =
+                                    newName  != _user.fullName ||
+                                    newPhone != (_user.phone ?? '') ||
+                                    newUniv  != (_user.university ?? '');
+                                if (!hasChanges) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                        'No hay cambios para guardar',
+                                        style: TextStyle(color: Colors.white70),
+                                      ),
+                                      backgroundColor: const Color(0xFF1E1E1E),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        side: BorderSide(color: Colors.white12),
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                ctx.read<ProfileBloc>().add(
+                                  ProfileSaveRequestedEvent(
+                                    fullName:   newName,
+                                    phone:      newPhone,
+                                    university: newUniv,
+                                  ),
+                                );
+                              },
+                        child: isSaving
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                'Save Changes',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       );
                     },
-                    child: const Text(
-                      'Save Changes',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
                 ),
                 const SizedBox(height: 32),

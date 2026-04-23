@@ -15,7 +15,9 @@ import 'features/verify/ui/screens/verify_screen.dart';
 import 'features/home/ui/screens/home_screen.dart';
 import 'features/admin/ui/screens/admin_dashboard_screen.dart';
 import 'features/auth/domain/usecases/sign_out_usecase.dart';
+import 'features/auth/domain/usecases/update_profile_usecase.dart';
 import 'features/profile/ui/bloc/logout_bloc.dart';
+import 'features/profile/ui/bloc/profile_bloc.dart';
 import 'features/profile/ui/screens/profile_screen.dart';
 import 'features/session/session_cubit.dart';
 
@@ -80,10 +82,22 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
             final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
             return AdminDashboardScreen(user: user);
           },
-          '/profile': (_) => BlocProvider(
-            create: (_) => LogoutBloc(
-              SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
-            ),
+          '/profile': (ctx) => MultiBlocProvider(
+            providers: [
+              BlocProvider(
+                create: (_) => LogoutBloc(
+                  SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+                ),
+              ),
+              BlocProvider(
+                create: (_) => ProfileBloc(
+                  UpdateProfileUseCase(
+                    AuthRepositoryImpl(CognitoAuthDataSource()),
+                  ),
+                  ctx.read<SessionCubit>().state!.id,
+                ),
+              ),
+            ],
             child: const ProfileScreen(),
           ),
         },

@@ -1,4 +1,4 @@
-.PHONY: db-up db-migrate db-seed db-connect db-down venv lambda-build profile-build
+.PHONY: db-up db-migrate db-seed db-connect db-down venv lambda-build profile-build update-profile-build
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -56,9 +56,24 @@ profile-build: venv
 	 echo "✓ Paquete Lambda listo en $$PKG"
 
 # ---------------------------------------------------------------------------
+# update-profile-build — empaqueta update_user_profile con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+update-profile-build: venv
+	@PKG="backend/update_user_profile/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/update_user_profile/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
 # db-up — abre acceso público temporal desde la IP del desarrollador
 # ---------------------------------------------------------------------------
-db-up: lambda-build profile-build
+db-up: lambda-build profile-build update-profile-build
 	@echo "Obteniendo IP pública…"
 	@MY_IP=$$(curl -s https://ifconfig.me) && \
 	 echo "IP detectada: $$MY_IP" && \
