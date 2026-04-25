@@ -136,10 +136,10 @@ resource "aws_cognito_user_group" "students_group" {
 # 1. Crear el usuario Administrador base
 resource "aws_cognito_user" "super_admin" {
   user_pool_id = aws_cognito_user_pool.icesi_score_pool.id
-  username     = "admin@uicesi.edu.co"
+  username     = "superadmin@uicesi.edu.co"
   
   attributes = {
-    email          = "admin@uicesi.edu.co"
+    email          = "superadmin@uicesi.edu.co"
     email_verified = true
   }
   

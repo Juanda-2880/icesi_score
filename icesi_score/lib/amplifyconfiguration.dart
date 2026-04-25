@@ -1,4 +1,4 @@
-const apiBaseUrl = 'https://eobbg4aof2.execute-api.us-east-2.amazonaws.com';
+const apiBaseUrl = 'https://qdogbas4b1.execute-api.us-east-2.amazonaws.com';
 
 const amplifyconfig = ''' {
     "UserAgent": "aws-amplify-cli/2.0",
@@ -8,8 +8,8 @@ const amplifyconfig = ''' {
             "awsCognitoAuthPlugin": {
                 "CognitoUserPool": {
                     "Default": {
-                        "PoolId": "us-east-2_j2PbkbsZc",
-                        "AppClientId": "1c3g8tjf8tlng20tiu68gbesl8",
+                        "PoolId": "us-east-2_Vej3TNoKW",
+                        "AppClientId": "4b7f506p3eau38bi3297on7rqc",
                         "Region": "us-east-2"
                     }
                 },
