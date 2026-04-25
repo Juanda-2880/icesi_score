@@ -22,6 +22,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         password: event.password,
       );
       emit(LoginSuccessState(user));
+    } on NewPasswordRequiredException {
+      emit(const LoginNewPasswordRequiredState());
     } on AuthException catch (e) {
       emit(LoginFailureState(e.message));
     } on Exception {

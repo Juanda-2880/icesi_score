@@ -63,6 +63,37 @@ class UserProfileApiDataSource {
     }
   }
 
+  Future<void> createAdminUser({
+    required String idToken,
+    required String fullName,
+    required String email,
+    required String phone,
+    required String university,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_kApiBase/admin/users'),
+      headers: {
+        'Authorization': 'Bearer $idToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'fullName': fullName,
+        'email': email,
+        'phone': phone,
+        'university': university,
+      }),
+    );
+
+    if (response.statusCode == 201) return;
+    if (response.statusCode == 403) {
+      throw Exception('No tienes permisos para crear administradores.');
+    }
+    if (response.statusCode == 409) {
+      throw Exception('Ya existe un usuario con ese correo.');
+    }
+    throw Exception('Error al crear el administrador. Intenta de nuevo.');
+  }
+
   AuthUser _parseUser(String responseBody) {
     final body = jsonDecode(responseBody) as Map<String, dynamic>;
     return AuthUser(

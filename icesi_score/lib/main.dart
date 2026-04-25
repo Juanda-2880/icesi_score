@@ -14,9 +14,13 @@ import 'features/register/ui/screens/register_screen.dart';
 import 'features/verify/ui/screens/verify_screen.dart';
 import 'features/home/ui/screens/home_screen.dart';
 import 'features/admin/ui/screens/admin_dashboard_screen.dart';
+import 'features/admin/ui/screens/create_admin_screen.dart';
+import 'features/auth/domain/usecases/confirm_new_password_usecase.dart';
 import 'features/auth/domain/usecases/delete_account_usecase.dart';
 import 'features/auth/domain/usecases/sign_out_usecase.dart';
 import 'features/auth/domain/usecases/update_profile_usecase.dart';
+import 'features/login/ui/bloc/set_password_bloc.dart';
+import 'features/login/ui/screens/set_new_password_screen.dart';
 import 'features/profile/ui/bloc/delete_bloc.dart';
 import 'features/profile/ui/bloc/logout_bloc.dart';
 import 'features/profile/ui/bloc/profile_bloc.dart';
@@ -52,13 +56,6 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
     )();
   }
 
-  Widget _resolveHome(AuthUser user) {
-    if (user.role == 'ADMIN' || user.role == 'SUPERADMIN') {
-      return AdminDashboardScreen(user: user);
-    }
-    return HomeScreen(user: user);
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocProvider<SessionCubit>(
@@ -74,16 +71,33 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
           '/verify':   (_) => const VerifyScreen(),
           '/routing': (ctx) {
             final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
-            return _resolveHome(user);
+            return _RoutingGate(user: user);
           },
           '/home': (ctx) {
             final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
             return HomeScreen(user: user);
           },
-          '/admin': (ctx) {
-            final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
-            return AdminDashboardScreen(user: user);
-          },
+          '/set-password': (_) => BlocProvider(
+            create: (_) => SetPasswordBloc(
+              ConfirmNewPasswordUseCase(
+                AuthRepositoryImpl(CognitoAuthDataSource()),
+              ),
+            ),
+            child: const SetNewPasswordScreen(),
+          ),
+          '/admin': (_) => BlocProvider(
+            create: (_) => LogoutBloc(
+              SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+            ),
+            child: const AdminDashboardScreen(),
+          ),
+          '/superadmin': (_) => BlocProvider(
+            create: (_) => LogoutBloc(
+              SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+            ),
+            child: const AdminDashboardScreen(),
+          ),
+          '/create-admin': (_) => const CreateAdminScreen(),
           '/profile': (ctx) {
             final userId = ctx.read<SessionCubit>().state!.id;
             return MultiBlocProvider(
@@ -116,6 +130,39 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
         },
         home: _SplashRouter(sessionFuture: _sessionFuture),
       ),
+    );
+  }
+}
+
+class _RoutingGate extends StatefulWidget {
+  final AuthUser user;
+  const _RoutingGate({required this.user});
+
+  @override
+  State<_RoutingGate> createState() => _RoutingGateState();
+}
+
+class _RoutingGateState extends State<_RoutingGate> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      switch (widget.user.role) {
+        case 'SUPERADMIN':
+          Navigator.pushReplacementNamed(context, '/superadmin');
+        case 'ADMIN':
+          Navigator.pushReplacementNamed(context, '/admin');
+        default:
+          Navigator.pushReplacementNamed(context, '/home', arguments: widget.user);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
     );
   }
 }

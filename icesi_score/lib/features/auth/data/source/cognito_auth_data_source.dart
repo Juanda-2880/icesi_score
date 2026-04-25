@@ -9,6 +9,11 @@ class AuthException implements Exception {
   String toString() => message;
 }
 
+class NewPasswordRequiredException extends AuthException {
+  const NewPasswordRequiredException()
+      : super('Se requiere establecer una nueva contraseña.');
+}
+
 class CognitoAuthDataSource {
   Future<void> signUp({
     required String email,
@@ -73,6 +78,10 @@ class CognitoAuthDataSource {
       );
 
       if (!result.isSignedIn) {
+        if (result.nextStep.signInStep ==
+            AuthSignInStep.confirmSignInWithNewPassword) {
+          throw const NewPasswordRequiredException();
+        }
         throw const AuthException('No se pudo completar el inicio de sesión.');
       }
 
@@ -104,10 +113,29 @@ class CognitoAuthDataSource {
       throw const AuthException('Acceso inválido. Por favor, inténtelo otra vez.');
     } on NotAuthorizedServiceException {
       throw const AuthException('Acceso inválido. Por favor, inténtelo otra vez.');
+    } on NewPasswordRequiredException {
+      rethrow;
     } on AuthException {
       throw const AuthException('Acceso inválido. Por favor, inténtelo otra vez.');
     } on Exception {
       throw AuthException('Error de conexión. Verifica tu red e inténtalo de nuevo.');
+    }
+  }
+
+  Future<void> confirmNewPassword(String newPassword) async {
+    try {
+      final result = await Amplify.Auth.confirmSignIn(confirmationValue: newPassword);
+      if (!result.isSignedIn) {
+        throw const AuthException('No se pudo establecer la nueva contraseña.');
+      }
+    } on AuthNotAuthorizedException {
+      throw const AuthException('La contraseña temporal no es válida.');
+    } on InvalidPasswordException catch (e) {
+      throw AuthException('Contraseña inválida: ${e.message}');
+    } on AuthException {
+      rethrow;
+    } on Exception catch (e) {
+      throw AuthException('Error al cambiar contraseña: $e');
     }
   }
 

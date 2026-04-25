@@ -1,4 +1,4 @@
-.PHONY: db-up db-migrate db-seed db-connect db-down venv lambda-build profile-build update-profile-build delete-user-build
+.PHONY: db-up db-migrate db-seed db-connect db-down venv superadmin-seed lambda-build profile-build update-profile-build delete-user-build create-admin-user-build
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -6,6 +6,13 @@ PIP    := $(VENV)/bin/pip
 
 DB_NAME ?= icesi_score
 DB_USER ?= icesi_admin
+
+# Superadmin — valores por defecto (sobrescribir en la línea de make)
+SUPERADMIN_EMAIL      ?= superadmin@uicesi.edu.co
+SUPERADMIN_FULL_NAME  ?= Super Administrador
+SUPERADMIN_PHONE      ?= +57000000000
+SUPERADMIN_UNIVERSITY ?= Icesi
+# SUPERADMIN_PASSWORD no tiene default: se requiere explícitamente
 
 # Macro de shell: extrae host y puerto de Terraform (se expande dentro de cada recipe)
 define rds_vars
@@ -22,7 +29,7 @@ venv: $(VENV)/bin/activate
 
 $(VENV)/bin/activate:
 	@python3 -m venv $(VENV)
-	@$(PIP) install -q psycopg2-binary
+	@$(PIP) install -q psycopg2-binary boto3
 	@echo "✓ Entorno virtual listo en $(VENV)/"
 
 # ---------------------------------------------------------------------------
@@ -86,9 +93,24 @@ delete-user-build: venv
 	 echo "✓ Paquete Lambda listo en $$PKG"
 
 # ---------------------------------------------------------------------------
+# create-admin-user-build — empaqueta create_admin_user con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+create-admin-user-build: venv
+	@PKG="backend/create_admin_user/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/create_admin_user/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
 # db-up — abre acceso público temporal desde la IP del desarrollador
 # ---------------------------------------------------------------------------
-db-up: lambda-build profile-build update-profile-build delete-user-build
+db-up: lambda-build profile-build update-profile-build delete-user-build create-admin-user-build
 	@echo "Obteniendo IP pública…"
 	@MY_IP=$$(curl -s https://ifconfig.me) && \
 	 echo "IP detectada: $$MY_IP" && \
@@ -98,7 +120,8 @@ db-up: lambda-build profile-build update-profile-build delete-user-build
 	   -var="db_password=$(DB_PASSWORD)"
 
 # ---------------------------------------------------------------------------
-# db-migrate — aplica schema.sql vía Python (usa venv local)
+# db-migrate — aplica schema.sql y crea el SUPERADMIN
+# Uso: make db-migrate DB_PASSWORD=X SUPERADMIN_PASSWORD=Y
 # ---------------------------------------------------------------------------
 db-migrate: venv
 	@$(rds_vars); \
@@ -108,6 +131,32 @@ db-migrate: venv
 	 DB_USER="$(DB_USER)" \
 	 DB_PASSWORD="$(DB_PASSWORD)" \
 	 $(PYTHON) backend/db/run_migrations.py
+	@$(MAKE) superadmin-seed DB_PASSWORD="$(DB_PASSWORD)" SUPERADMIN_PASSWORD="$(SUPERADMIN_PASSWORD)"
+
+# ---------------------------------------------------------------------------
+# superadmin-seed — crea/actualiza el SUPERADMIN en Cognito y en la BD
+# Uso: make superadmin-seed DB_PASSWORD=X SUPERADMIN_PASSWORD=Y
+# Opcional: SUPERADMIN_EMAIL  SUPERADMIN_FULL_NAME  SUPERADMIN_PHONE  SUPERADMIN_UNIVERSITY
+# ---------------------------------------------------------------------------
+superadmin-seed: venv
+	@if [ -z "$(SUPERADMIN_PASSWORD)" ]; then \
+	  echo "❌ Falta SUPERADMIN_PASSWORD. Uso: make superadmin-seed DB_PASSWORD=X SUPERADMIN_PASSWORD=Y"; \
+	  exit 1; \
+	fi
+	@$(rds_vars); \
+	 POOL_ID=$$(cd infrastructure && terraform output -raw cognito_user_pool_id); \
+	 DB_HOST="$$RDS_HOST" \
+	 DB_PORT="$$RDS_PORT" \
+	 DB_NAME="$(DB_NAME)" \
+	 DB_USER="$(DB_USER)" \
+	 DB_PASSWORD="$(DB_PASSWORD)" \
+	 COGNITO_USER_POOL_ID="$$POOL_ID" \
+	 SUPERADMIN_EMAIL="$(SUPERADMIN_EMAIL)" \
+	 SUPERADMIN_PASSWORD="$(SUPERADMIN_PASSWORD)" \
+	 SUPERADMIN_FULL_NAME="$(SUPERADMIN_FULL_NAME)" \
+	 SUPERADMIN_PHONE="$(SUPERADMIN_PHONE)" \
+	 SUPERADMIN_UNIVERSITY="$(SUPERADMIN_UNIVERSITY)" \
+	 $(PYTHON) backend/db/seed_superadmin.py
 
 # ---------------------------------------------------------------------------
 # db-seed — carga datos iniciales con psql

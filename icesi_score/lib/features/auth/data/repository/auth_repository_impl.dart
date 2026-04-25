@@ -95,6 +95,44 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AuthUser> confirmNewPassword(String newPassword) async {
+    try {
+      await _cognito.confirmNewPassword(newPassword);
+      final idToken = await _cognito.getIdToken();
+      final user = await _profileApi.fetchProfile(idToken);
+      await _storage.saveSession(user);
+      return user;
+    } on AuthException {
+      rethrow;
+    } on Exception {
+      throw const AuthException('No se pudo establecer la nueva contraseña. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<void> createAdminUser({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String university,
+  }) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      await _profileApi.createAdminUser(
+        idToken: idToken,
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        university: university,
+      );
+    } on AuthException {
+      rethrow;
+    } on Exception {
+      rethrow;
+    }
+  }
+
+  @override
   Future<AuthUser> updateProfile({
     required String id,
     required String fullName,

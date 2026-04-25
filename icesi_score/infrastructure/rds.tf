@@ -37,16 +37,15 @@ resource "aws_security_group" "rds_sg" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.lambda_sg.id]
+    description     = "Lambdas en VPC"
   }
 
-  dynamic "ingress" {
-    for_each = var.dev_my_ip != "" ? [var.dev_my_ip] : []
-    content {
-      from_port   = 5432
-      to_port     = 5432
-      protocol    = "tcp"
-      cidr_blocks = ["${ingress.value}/32"]
-    }
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Acceso publico con SSL obligatorio (Lambda sin VPC + dev)"
   }
 
   egress {
@@ -68,7 +67,7 @@ resource "aws_db_instance" "icesi_score" {
   password               = var.db_password
   db_subnet_group_name   = aws_db_subnet_group.icesi_score.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  publicly_accessible    = var.dev_my_ip != ""
+  publicly_accessible    = true
   skip_final_snapshot    = true
   deletion_protection    = false
   multi_az               = false

@@ -23,3 +23,7 @@ class LoginFailureState extends LoginState {
 
   const LoginFailureState(this.errorMessage);
 }
+
+class LoginNewPasswordRequiredState extends LoginState {
+  const LoginNewPasswordRequiredState();
+}

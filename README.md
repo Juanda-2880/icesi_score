@@ -84,29 +84,55 @@ La RDS quedará accesible **solo desde tu IP** mientras trabajas.
 Escribe `yes` para confirmar.
 
 
-#### 4. Aplicar el schema de base de datos
+#### 4. Aplicar el schema y crear el SUPERADMIN
 ```bash
-make db-migrate DB_PASSWORD=tu_password
+make db-migrate DB_PASSWORD=tu_password SUPERADMIN_PASSWORD=tu_password_superadmin
 ```
-Crea el entorno virtual Python (`.venv/`) la primera vez, instala `psycopg2-binary`
-y ejecuta `backend/db/schema.sql` sobre la RDS con SSL.
+Crea el entorno virtual Python (`.venv/`) la primera vez, instala `psycopg2-binary` y `boto3`,
+ejecuta `backend/db/schema.sql` sobre la RDS con SSL, y luego crea automáticamente el usuario
+SUPERADMIN en Cognito y en `app_users`.
+
+Variables opcionales del SUPERADMIN (tienen valores por defecto):
+
+| Variable | Default |
+|----------|---------|
+| `SUPERADMIN_EMAIL` | `superadmin@uicesi.edu.co` |
+| `SUPERADMIN_FULL_NAME` | `Super Administrador` |
+| `SUPERADMIN_PHONE` | `+57000000000` |
+| `SUPERADMIN_UNIVERSITY` | `Icesi` |
+
+Ejemplo con todos los parámetros:
+```bash
+make db-migrate DB_PASSWORD=X SUPERADMIN_PASSWORD=Y \
+  SUPERADMIN_EMAIL=admin@midominio.com \
+  SUPERADMIN_FULL_NAME="Mi Nombre"
+```
+
+> El script de SUPERADMIN es **idempotente**: si el usuario ya existe en Cognito o en la BD,
+> lo actualiza sin fallar. Se puede ejecutar varias veces con seguridad.
 
 #### 5. Cargar datos de prueba (seed)
 ```bash
 make db-seed DB_PASSWORD=tu_password
 ```
 
-#### 6. (Opcional) Conectarse interactivamente a la base de datos
+#### 6. (Opcional) Re-crear solo el SUPERADMIN sin re-migrar
+Útil si ya tienes el schema aplicado y solo necesitas resetear el SUPERADMIN:
+```bash
+make superadmin-seed DB_PASSWORD=tu_password SUPERADMIN_PASSWORD=tu_password_superadmin
+```
+
+#### 7. (Opcional) Conectarse interactivamente a la base de datos
 ```bash
 make db-connect DB_PASSWORD=tu_password
 ```
 
-#### 7. Correr la app Flutter
+#### 8. Correr la app Flutter
 ```bash
 flutter run
 ```
 
-#### 8. Apagar la infraestructura al terminar
+#### 9. Apagar la infraestructura al terminar
 > **Importante:** siempre destruye la RDS al finalizar tu sesión para no generar costos.
 ```bash
 make db-down DB_PASSWORD=tu_password
@@ -118,9 +144,10 @@ make db-down DB_PASSWORD=tu_password
 
 | Comando | Acción |
 |---------|--------|
-| `make venv` | Crea `.venv` e instala dependencias Python |
-| `make db-up DB_PASSWORD=X` | `terraform apply` — levanta RDS con tu IP |
-| `make db-migrate DB_PASSWORD=X` | Aplica `schema.sql` (Python + SSL) |
+| `make venv` | Crea `.venv` e instala `psycopg2-binary` y `boto3` |
+| `make db-up DB_PASSWORD=X` | `terraform apply` — levanta RDS y despliega Lambdas |
+| `make db-migrate DB_PASSWORD=X SUPERADMIN_PASSWORD=Y` | Aplica `schema.sql` y crea el SUPERADMIN |
+| `make superadmin-seed DB_PASSWORD=X SUPERADMIN_PASSWORD=Y` | Crea/actualiza solo el SUPERADMIN |
 | `make db-seed DB_PASSWORD=X` | Carga `seed.sql` con `psql` |
 | `make db-connect DB_PASSWORD=X` | Terminal `psql` interactiva con SSL |
 | `make db-down DB_PASSWORD=X` | `terraform destroy` |
@@ -139,7 +166,8 @@ make db-down DB_PASSWORD=tu_password
 | Región | `us-east-2` |
 
 - Schema completo: `backend/db/schema.sql`
+- Seed SUPERADMIN: `backend/db/seed_superadmin.py` (Cognito + BD)
 - Datos de prueba: `backend/db/seed.sql` (2 equipos, 1 liga, 6 jugadores)
 - La tabla de usuarios se llama `app_users` (`user` es palabra reservada en PostgreSQL)
 - Toda conexión requiere `sslmode=require`
-- En producción la RDS **no es accesible públicamente**; solo las Lambdas dentro de la VPC se conectan
+- La RDS es accesible públicamente (protegida por credenciales + SSL); las Lambdas en VPC la alcanzan por red privada

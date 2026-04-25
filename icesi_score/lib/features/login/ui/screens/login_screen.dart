@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) return 'El correo es obligatorio.';
-    final emailRegex = RegExp(r'^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$');
+    final emailRegex = RegExp(r'^[\w.+-]+@([\w-]+\.)+[a-zA-Z]{2,}$');
     if (!emailRegex.hasMatch(value.trim())) return 'Ingresa un correo válido.';
     return null;
   }
@@ -90,6 +90,8 @@ class _LoginScreenState extends State<LoginScreen> {
               (route) => false,
               arguments: state.user,
             );
+          } else if (state is LoginNewPasswordRequiredState) {
+            Navigator.pushNamed(context, '/set-password');
           } else if (state is LoginFailureState) {
             _showError(state.errorMessage);
           }

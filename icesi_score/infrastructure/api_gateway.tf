@@ -75,3 +75,29 @@ resource "aws_lambda_permission" "api_gw_delete_user" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.icesi_api.execution_arn}/*/*"
 }
+
+# ---------------------------------------------------------------------------
+# POST /admin/users — crea un administrador (solo SUPERADMIN)
+# ---------------------------------------------------------------------------
+resource "aws_apigatewayv2_integration" "create_admin_user_integration" {
+  api_id                 = aws_apigatewayv2_api.icesi_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.create_admin_user.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "create_admin_user_route" {
+  api_id             = aws_apigatewayv2_api.icesi_api.id
+  route_key          = "POST /admin/users"
+  target             = "integrations/${aws_apigatewayv2_integration.create_admin_user_integration.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
+}
+
+resource "aws_lambda_permission" "api_gw_create_admin_user" {
+  statement_id  = "AllowAPIGatewayInvokeCreateAdminUser"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.create_admin_user.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.icesi_api.execution_arn}/*/*"
+}

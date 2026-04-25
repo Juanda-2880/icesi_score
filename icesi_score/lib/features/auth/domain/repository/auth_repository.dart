@@ -33,4 +33,13 @@ abstract class AuthRepository {
   });
 
   Future<void> deleteAccount({required String id});
+
+  Future<void> createAdminUser({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String university,
+  });
+
+  Future<AuthUser> confirmNewPassword(String newPassword);
 }
