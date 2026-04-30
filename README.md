@@ -43,37 +43,131 @@ Nube construida en **AWS** (Cognito, API Gateway, Lambda) y gestionada como cód
 ## Guía de Despliegue Local (Para el Equipo)
 
 ### Requisitos Previos
-1. Instalar [AWS CLI](https://aws.amazon.com/cli/).
-2. Instalar [Terraform](https://developer.hashicorp.com/terraform/install).
-3. Solicitar las llaves de acceso de AWS (`Access Key` y `Secret Key`).
 
-### Pasos para levantar la nube
+| Herramienta | Instalación |
+|-------------|-------------|
+| AWS CLI | [aws.amazon.com/cli](https://aws.amazon.com/cli/) |
+| Terraform | [developer.hashicorp.com/terraform/install](https://developer.hashicorp.com/terraform/install) |
+| Python 3.x | ya incluido en la mayoría de sistemas |
+| psql | `sudo apt install postgresql-client` / `brew install libpq` |
 
-1. **Configurar credenciales de AWS:**
-   ```bash
-   aws configure
-   ```
-   Ingresa las llaves proporcionadas. Usa `us-east-2` como región y `json` como formato.
+Solicita las llaves de acceso AWS (`Access Key` + `Secret Key`) a un compañero con acceso.
 
-2. **Desplegar con Terraform:**
-   ```bash
-   cd infrastructure
-   terraform init
-   terraform apply
-   ```
-   Escribe `yes` cuando te pida confirmación. Esto creará los recursos en AWS y generará el archivo `amplifyconfiguration.dart` en tu carpeta `lib/`.
+---
 
-3. **Correr la App:**
-   Vuelve a la raíz del proyecto y lanza la aplicación en tu emulador o dispositivo:
-   ```bash
-   cd ..
-   flutter run
-   ```
+### Flujo completo con Makefile
 
-### Apagar la infraestructura (Importante)
-**SIEMPRE** destruye la infraestructura al terminar tu sesión de trabajo si nadie más la está usando:
+Todos los pasos se orquestan desde `icesi_score/` usando el `Makefile` incluido.  
+Pasa siempre `DB_PASSWORD=<tu_password>` como argumento.
+
 ```bash
-cd infrastructure
-terraform destroy
+cd icesi_score
 ```
+
+#### 1. Configurar credenciales AWS
+```bash
+aws configure
+# Región: us-east-2 | Formato: json
+```
+
+#### 2. Inicializar Terraform (solo la primera vez)
+```bash
+cd infrastructure && terraform init && cd ..
+```
+
+#### 3. Levantar la infraestructura con acceso temporal a RDS
+```bash
+make db-up DB_PASSWORD=tu_password
+```
+Esto empaqueta las Lambdas automáticamente, detecta tu IP pública y hace `terraform apply`.  
+La RDS quedará accesible **solo desde tu IP** mientras trabajas.  
 Escribe `yes` para confirmar.
+
+
+#### 4. Aplicar el schema y crear el SUPERADMIN
+```bash
+make db-migrate DB_PASSWORD=tu_password SUPERADMIN_PASSWORD=tu_password_superadmin
+```
+Crea el entorno virtual Python (`.venv/`) la primera vez, instala `psycopg2-binary` y `boto3`,
+ejecuta `backend/db/schema.sql` sobre la RDS con SSL, y luego crea automáticamente el usuario
+SUPERADMIN en Cognito y en `app_users`.
+
+Variables opcionales del SUPERADMIN (tienen valores por defecto):
+
+| Variable | Default |
+|----------|---------|
+| `SUPERADMIN_EMAIL` | `superadmin@uicesi.edu.co` |
+| `SUPERADMIN_FULL_NAME` | `Super Administrador` |
+| `SUPERADMIN_PHONE` | `+57000000000` |
+| `SUPERADMIN_UNIVERSITY` | `Icesi` |
+
+Ejemplo con todos los parámetros:
+```bash
+make db-migrate DB_PASSWORD=X SUPERADMIN_PASSWORD=Y \
+  SUPERADMIN_EMAIL=admin@midominio.com \
+  SUPERADMIN_FULL_NAME="Mi Nombre"
+```
+
+> El script de SUPERADMIN es **idempotente**: si el usuario ya existe en Cognito o en la BD,
+> lo actualiza sin fallar. Se puede ejecutar varias veces con seguridad.
+
+#### 5. Cargar datos de prueba (seed)
+```bash
+make db-seed DB_PASSWORD=tu_password
+```
+
+#### 6. (Opcional) Re-crear solo el SUPERADMIN sin re-migrar
+Útil si ya tienes el schema aplicado y solo necesitas resetear el SUPERADMIN:
+```bash
+make superadmin-seed DB_PASSWORD=tu_password SUPERADMIN_PASSWORD=tu_password_superadmin
+```
+
+#### 7. (Opcional) Conectarse interactivamente a la base de datos
+```bash
+make db-connect DB_PASSWORD=tu_password
+```
+
+#### 8. Correr la app Flutter
+```bash
+flutter run
+```
+
+#### 9. Apagar la infraestructura al terminar
+> **Importante:** siempre destruye la RDS al finalizar tu sesión para no generar costos.
+```bash
+make db-down DB_PASSWORD=tu_password
+```
+
+---
+
+### Referencia rápida de targets
+
+| Comando | Acción |
+|---------|--------|
+| `make venv` | Crea `.venv` e instala `psycopg2-binary` y `boto3` |
+| `make db-up DB_PASSWORD=X` | `terraform apply` — levanta RDS y despliega Lambdas |
+| `make db-migrate DB_PASSWORD=X SUPERADMIN_PASSWORD=Y` | Aplica `schema.sql` y crea el SUPERADMIN |
+| `make superadmin-seed DB_PASSWORD=X SUPERADMIN_PASSWORD=Y` | Crea/actualiza solo el SUPERADMIN |
+| `make db-seed DB_PASSWORD=X` | Carga `seed.sql` con `psql` |
+| `make db-connect DB_PASSWORD=X` | Terminal `psql` interactiva con SSL |
+| `make db-down DB_PASSWORD=X` | `terraform destroy` |
+
+---
+
+### Base de datos (PostgreSQL en Amazon RDS)
+
+| Parámetro | Valor |
+|-----------|-------|
+| Motor | PostgreSQL 15 |
+| Instancia | db.t3.micro (Free Tier) |
+| Storage | 20 GB |
+| Nombre DB | `icesi_score` |
+| Usuario | `icesi_admin` |
+| Región | `us-east-2` |
+
+- Schema completo: `backend/db/schema.sql`
+- Seed SUPERADMIN: `backend/db/seed_superadmin.py` (Cognito + BD)
+- Datos de prueba: `backend/db/seed.sql` (2 equipos, 1 liga, 6 jugadores)
+- La tabla de usuarios se llama `app_users` (`user` es palabra reservada en PostgreSQL)
+- Toda conexión requiere `sslmode=require`
+- La RDS es accesible públicamente (protegida por credenciales + SSL); las Lambdas en VPC la alcanzan por red privada

@@ -40,6 +40,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   url_launcher: ^6.3.2
   google_fonts: ^8.0.2
+  flutter_bloc: ^9.1.1
+  flutter_secure_storage: ^9.0.0
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

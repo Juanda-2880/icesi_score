@@ -6,6 +6,8 @@ class LabeledTextField extends StatelessWidget {
   final String hint;
   final bool obscureText;
   final TextInputType keyboardType;
+  final String? Function(String?)? validator;
+  final Widget? prefixIcon;
 
   const LabeledTextField({
     super.key,
@@ -14,6 +16,8 @@ class LabeledTextField extends StatelessWidget {
     required this.hint,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
+    this.validator,
+    this.prefixIcon,
   });
 
   @override
@@ -29,11 +33,12 @@ class LabeledTextField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
-          decoration: InputDecoration(hintText: hint),
+          validator: validator,
+          decoration: InputDecoration(hintText: hint, prefixIcon: prefixIcon),
         ),
       ],
     );

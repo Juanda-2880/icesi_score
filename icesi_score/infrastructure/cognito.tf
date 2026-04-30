@@ -1,7 +1,7 @@
 resource "aws_cognito_user_pool" "icesi_score_pool" {
   name = "icesi-score-users"
 
-  username_attributes         = ["email"]
+  username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 
   password_policy {
@@ -17,6 +17,47 @@ resource "aws_cognito_user_pool" "icesi_score_pool" {
       name     = "verified_email"
       priority = 1
     }
+  }
+
+  # Atributos estándar enviados en el sign-up desde Flutter
+  schema {
+    name                = "name"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 255
+    }
+  }
+
+  schema {
+    name                = "phone_number"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 50
+    }
+  }
+
+  # Atributo personalizado: universidad (custom:university en la app Flutter)
+  schema {
+    name                     = "university"
+    attribute_data_type      = "String"
+    mutable                  = true
+    required                 = false
+    developer_only_attribute = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 255
+    }
+  }
+
+  # PostConfirmation trigger → inserta el usuario en RDS con role=NORMAL
+  lambda_config {
+    post_confirmation = aws_lambda_function.post_confirmation.arn
   }
 
   tags = {
@@ -51,6 +92,8 @@ resource "local_file" "amplify_config_dart" {
 
   filename = "../lib/amplifyconfiguration.dart"
   content = <<-EOT
+const apiBaseUrl = '${aws_apigatewayv2_api.icesi_api.api_endpoint}';
+
 const amplifyconfig = ''' {
     "UserAgent": "aws-amplify-cli/2.0",
     "Version": "1.0",
@@ -90,24 +133,3 @@ resource "aws_cognito_user_group" "students_group" {
   description  = "Usuarios regulares de la aplicación"
 }
 
-# 1. Crear el usuario Administrador base
-resource "aws_cognito_user" "super_admin" {
-  user_pool_id = aws_cognito_user_pool.icesi_score_pool.id
-  username     = "admin@uicesi.edu.co"
-  
-  attributes = {
-    email          = "admin@uicesi.edu.co"
-    email_verified = true
-  }
-  
-  # Contraseña inicial (Cognito podría pedirte cambiarla al primer login, 
-  # pero en nuestro flujo funcionará para pruebas)
-  password = "SuperPassword123!" 
-}
-
-# 2. Meter a ese usuario en el grupo de Admins
-resource "aws_cognito_user_in_group" "super_admin_membership" {
-  user_pool_id = aws_cognito_user_pool.icesi_score_pool.id
-  group_name   = aws_cognito_user_group.admins_group.name
-  username     = aws_cognito_user.super_admin.username
-}

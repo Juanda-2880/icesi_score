@@ -81,3 +81,12 @@ node_modules/
 # Variables de entorno
 .env
 *.env
+
+# Documentación personal y asistente
+
+CLAUDE.md
+DATABASE.md
+TASKS.md
+# Lambda build artifacts
+backend/post_confirmation/package/
+backend/post_confirmation/lambda_function.zip
