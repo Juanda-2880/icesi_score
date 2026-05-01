@@ -4,17 +4,23 @@ Plataforma móvil para el seguimiento de partidos deportivos universitarios (Fú
 
 ## Frontend: Reglas de Desarrollo (Flutter)
 
+La arquitectura del frontend sigue **Clean Architecture + BLoC**. Cada feature vive en `lib/features/<feature>/` con capas `domain/`, `data/` y `ui/`.
+
 1. **Uso obligatorio de `Key`:** Todos los widgets deben inicializarse con un `key` (ej. `super.key` en el constructor) para evitar ciclos de re-renderizado innecesarios en Flutter.
 
-2. **StatefulWidgets components:**
-   * Limitados **exclusivamente** a las Pantallas completas (Screens/Pages).
-   * Se ubican en la carpeta `lib/screens/`.
-   * Son responsables de manejar el estado de la aplicación, interactuar con los servicios y pasar la información a los componentes hijos.
+2. **StatefulWidgets:**
+   * Limitados **exclusivamente** a las pantallas completas (Screens/Pages).
+   * Se ubican en `lib/features/<feature>/ui/screens/`.
+   * No contienen lógica de negocio — delegan al BLoC correspondiente.
 
-3. ** StatelessWidgets components:**
+3. **StatelessWidgets:**
    * Todo lo que no sea una pantalla completa debe ser un `StatelessWidget`.
-   * Se ubican en la carpeta `lib/widgets/` y están divididos por contexto (`common`, `match`, `soccer`, `volleyball`).
-   * Solo reciben datos mediante parámetros y dibujan la interfaz. No manejan lógica de negocio ni estado interno. Si requieren una acción (como un botón), reciben la función como parámetro (Callbacks).
+   * Se ubican en `lib/widgets/` (componentes globales) o dentro de la carpeta `ui/` del feature.
+   * Solo reciben datos y callbacks como parámetros. Nunca acceden al BLoC directamente.
+
+4. **BLoC:**
+   * Un BLoC por pantalla o tab, ubicado en `lib/features/<feature>/ui/bloc/`.
+   * Solo conoce UseCases del dominio, nunca `RepositoryImpl` ni fuentes de datos.
 
 ## Backend e Infraestructura: Reglas de Desarrollo
 
@@ -34,10 +40,8 @@ Nube construida en **AWS** (Cognito, API Gateway, Lambda) y gestionada como cód
 * `assets/`: Fuentes, imágenes, logos e iconos.
 * `backend/`: Scripts de Python para las funciones Lambda de AWS.
 * `infrastructure/`: Archivos `.tf` de Terraform que definen y construyen nuestra nube en AWS.
-* `lib/models/`: Clases puras de Dart (ej. Team, Player, Match, AppUser).
-* `lib/screens/`: Pantallas principales de la app (Stateful), divididas por dominio (`auth/`, `home/`, `admin/`).
-* `lib/widgets/`: Componentes UI reutilizables y atomizados (Stateless).
-* `lib/services/`: Lógica de conexión a backend y AWS Amplify (`AuthService`, etc.).
+* `lib/features/`: Features de la app, cada uno con subcarpetas `domain/`, `data/` y `ui/`.
+* `lib/widgets/`: Componentes UI reutilizables y atomizados (StatelessWidget).
 * `lib/theme/`: Configuración global de Material App, colores y tipografías.
 
 ## Guía de Despliegue Local (Para el Equipo)
