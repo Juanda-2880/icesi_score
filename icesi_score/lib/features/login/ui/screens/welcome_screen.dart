@@ -45,7 +45,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Track - Predict - Win',
+                'Track • Follow • Stay Updated',
                 style: TextStyle(color: Colors.orangeAccent, fontSize: 14),
               ),
               const Spacer(),
@@ -72,19 +72,6 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
-              const Text(
-                'Are you a university administrator?',
-                style: TextStyle(color: Colors.grey),
-              ),
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  'Log in with Icesi SSO',
-                  style: TextStyle(color: Color(0xFF5C5CFF)),
-                ),
-              ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
