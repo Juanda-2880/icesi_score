@@ -71,6 +71,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           actions: [
             IconButton(
+              icon: const Icon(Icons.person_outline),
+              tooltip: 'Mi perfil',
+              onPressed: () => Navigator.pushNamed(context, '/profile'),
+            ),
+            IconButton(
               icon: const Icon(Icons.logout),
               tooltip: 'Cerrar sesión',
               onPressed: () => context
