@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../auth/data/repository/auth_repository_impl.dart';
-import '../../../auth/data/source/cognito_auth_data_source.dart';
-import '../../../auth/domain/usecases/create_admin_usecase.dart';
 import '../../../session/session_cubit.dart';
 import '../../../../widgets/common/labeled_text_field.dart';
 import '../../../../widgets/common/loading_button.dart';
@@ -83,86 +80,81 @@ class _CreateAdminScreenState extends State<CreateAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<CreateAdminBloc>(
-      create: (_) => CreateAdminBloc(
-        CreateAdminUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
-      ),
-      child: BlocListener<CreateAdminBloc, CreateAdminState>(
-        listener: (ctx, state) {
-          if (state is CreateAdminSuccessState) {
-            _formKey.currentState?.reset();
-            for (final c in [_fullNameController, _emailController, _phoneController, _universityController]) {
-              c.clear();
-            }
-            ScaffoldMessenger.of(ctx).showSnackBar(
-              const SnackBar(
-                content: Text('Invitación enviada al nuevo Administrador ✓'),
+    return BlocListener<CreateAdminBloc, CreateAdminState>(
+      listener: (ctx, state) {
+        if (state is CreateAdminSuccessState) {
+          _formKey.currentState?.reset();
+          for (final c in [_fullNameController, _emailController, _phoneController, _universityController]) {
+            c.clear();
+          }
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(
+              content: Text('Invitación enviada al nuevo Administrador ✓'),
+            ),
+          );
+        } else if (state is CreateAdminFailureState) {
+          _showError(ctx, state.errorMessage);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Nuevo Administrador'),
+          leading: const BackButton(),
+        ),
+        body: BlocBuilder<CreateAdminBloc, CreateAdminState>(
+          builder: (ctx, state) {
+            final isLoading = state is CreateAdminLoadingState;
+            return Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LabeledTextField(
+                      label: 'Nombre Completo',
+                      controller: _fullNameController,
+                      hint: 'Nombre y apellido',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      validator: (v) => _validateRequired(v, 'El nombre'),
+                    ),
+                    const SizedBox(height: 20),
+                    LabeledTextField(
+                      label: 'Email',
+                      controller: _emailController,
+                      hint: 'admin@uicesi.edu.co',
+                      keyboardType: TextInputType.emailAddress,
+                      prefixIcon: const Icon(Icons.email_outlined),
+                      validator: _validateEmail,
+                    ),
+                    const SizedBox(height: 20),
+                    LabeledTextField(
+                      label: 'Teléfono',
+                      controller: _phoneController,
+                      hint: '+573001234567',
+                      keyboardType: TextInputType.phone,
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                      validator: (v) => _validateRequired(v, 'El teléfono'),
+                    ),
+                    const SizedBox(height: 20),
+                    LabeledTextField(
+                      label: 'Universidad',
+                      controller: _universityController,
+                      hint: 'ICESI',
+                      prefixIcon: const Icon(Icons.school_outlined),
+                      validator: (v) => _validateRequired(v, 'La universidad'),
+                    ),
+                    const SizedBox(height: 40),
+                    LoadingButton(
+                      isLoading: isLoading,
+                      onPressed: isLoading ? () {} : () => _submit(ctx),
+                      label: 'Enviar Invitación',
+                    ),
+                  ],
+                ),
               ),
             );
-          } else if (state is CreateAdminFailureState) {
-            _showError(ctx, state.errorMessage);
-          }
-        },
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Nuevo Administrador'),
-            leading: const BackButton(),
-          ),
-          body: BlocBuilder<CreateAdminBloc, CreateAdminState>(
-            builder: (ctx, state) {
-              final isLoading = state is CreateAdminLoadingState;
-              return Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      LabeledTextField(
-                        label: 'Nombre Completo',
-                        controller: _fullNameController,
-                        hint: 'Nombre y apellido',
-                        prefixIcon: const Icon(Icons.person_outline),
-                        validator: (v) => _validateRequired(v, 'El nombre'),
-                      ),
-                      const SizedBox(height: 20),
-                      LabeledTextField(
-                        label: 'Email',
-                        controller: _emailController,
-                        hint: 'admin@uicesi.edu.co',
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: const Icon(Icons.email_outlined),
-                        validator: _validateEmail,
-                      ),
-                      const SizedBox(height: 20),
-                      LabeledTextField(
-                        label: 'Teléfono',
-                        controller: _phoneController,
-                        hint: '+573001234567',
-                        keyboardType: TextInputType.phone,
-                        prefixIcon: const Icon(Icons.phone_outlined),
-                        validator: (v) => _validateRequired(v, 'El teléfono'),
-                      ),
-                      const SizedBox(height: 20),
-                      LabeledTextField(
-                        label: 'Universidad',
-                        controller: _universityController,
-                        hint: 'ICESI',
-                        prefixIcon: const Icon(Icons.school_outlined),
-                        validator: (v) => _validateRequired(v, 'La universidad'),
-                      ),
-                      const SizedBox(height: 40),
-                      LoadingButton(
-                        isLoading: isLoading,
-                        onPressed: isLoading ? () {} : () => _submit(ctx),
-                        label: 'Enviar Invitación',
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+          },
         ),
       ),
     );

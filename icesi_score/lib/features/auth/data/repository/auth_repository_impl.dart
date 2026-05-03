@@ -1,19 +1,23 @@
 import '../../domain/entities/auth_user.dart';
+import '../../domain/exceptions/auth_exception.dart';
 import '../../domain/repository/auth_repository.dart';
-import '../source/cognito_auth_data_source.dart';
+import '../source/remote_auth_data_source.dart';
+import '../source/local_auth_data_source.dart';
+import '../source/user_profile_data_source.dart';
 import '../source/secure_storage_data_source.dart';
 import '../source/user_profile_api_data_source.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  final CognitoAuthDataSource _cognito;
-  final SecureStorageDataSource _storage;
-  final UserProfileApiDataSource _profileApi;
+  final RemoteAuthDataSource _cognito;
+  final LocalAuthDataSource _storage;
+  final UserProfileDataSource _profileApi;
 
   AuthRepositoryImpl(
-    this._cognito, [
-    SecureStorageDataSource? storage,
-    UserProfileApiDataSource? profileApi,
-  ])  : _storage = storage ?? SecureStorageDataSource(),
+    RemoteAuthDataSource cognito, [
+    LocalAuthDataSource? storage,
+    UserProfileDataSource? profileApi,
+  ])  : _cognito = cognito,
+        _storage = storage ?? SecureStorageDataSource(),
         _profileApi = profileApi ?? UserProfileApiDataSource();
 
   @override

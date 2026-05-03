@@ -1,20 +1,10 @@
-import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
-import 'package:amplify_flutter/amplify_flutter.dart';
+import 'package:amplify_auth_cognito/amplify_auth_cognito.dart' hide AuthException;
+import 'package:amplify_flutter/amplify_flutter.dart' hide AuthException;
+import '../../domain/exceptions/auth_exception.dart';
+import 'remote_auth_data_source.dart';
 
-class AuthException implements Exception {
-  final String message;
-  const AuthException(this.message);
-
+class CognitoAuthDataSource implements RemoteAuthDataSource {
   @override
-  String toString() => message;
-}
-
-class NewPasswordRequiredException extends AuthException {
-  const NewPasswordRequiredException()
-      : super('Se requiere establecer una nueva contraseña.');
-}
-
-class CognitoAuthDataSource {
   Future<void> signUp({
     required String email,
     required String password,
@@ -46,6 +36,7 @@ class CognitoAuthDataSource {
     }
   }
 
+  @override
   Future<void> confirmSignUp({
     required String email,
     required String code,
@@ -67,6 +58,7 @@ class CognitoAuthDataSource {
   }
 
   // Returns {userId, email, fullName, phone, university} on success.
+  @override
   Future<Map<String, String?>> signIn({
     required String email,
     required String password,
@@ -122,6 +114,7 @@ class CognitoAuthDataSource {
     }
   }
 
+  @override
   Future<void> confirmNewPassword(String newPassword) async {
     try {
       final result = await Amplify.Auth.confirmSignIn(confirmationValue: newPassword);
@@ -139,6 +132,7 @@ class CognitoAuthDataSource {
     }
   }
 
+  @override
   Future<void> signOut() async {
     try {
       await Amplify.Auth.signOut(
@@ -149,6 +143,7 @@ class CognitoAuthDataSource {
     }
   }
 
+  @override
   Future<bool> isSessionValid() async {
     try {
       final session = await Amplify.Auth.fetchAuthSession();
@@ -158,12 +153,14 @@ class CognitoAuthDataSource {
     }
   }
 
+  @override
   Future<String> getIdToken() async {
     final session = await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
     return session.userPoolTokensResult.value.idToken.raw;
   }
 
   // Deletes the current Cognito user and signs them out automatically.
+  @override
   Future<void> deleteUser() async {
     try {
       await Amplify.Auth.deleteUser();

@@ -7,25 +7,33 @@ import 'theme/app_theme.dart';
 import 'features/auth/data/repository/auth_repository_impl.dart';
 import 'features/auth/data/source/cognito_auth_data_source.dart';
 import 'features/auth/domain/entities/auth_user.dart';
+import 'features/auth/domain/usecases/confirm_new_password_usecase.dart';
+import 'features/auth/domain/usecases/confirm_sign_up_usecase.dart';
+import 'features/auth/domain/usecases/create_admin_usecase.dart';
+import 'features/auth/domain/usecases/delete_account_usecase.dart';
 import 'features/auth/domain/usecases/get_stored_session_usecase.dart';
-import 'features/login/ui/screens/welcome_screen.dart';
-import 'features/login/ui/screens/login_screen.dart';
-import 'features/register/ui/screens/register_screen.dart';
-import 'features/verify/ui/screens/verify_screen.dart';
-import 'features/home/ui/screens/home_screen.dart';
+import 'features/auth/domain/usecases/sign_in_usecase.dart';
+import 'features/auth/domain/usecases/sign_out_usecase.dart';
+import 'features/auth/domain/usecases/sign_up_usecase.dart';
+import 'features/auth/domain/usecases/update_profile_usecase.dart';
+import 'features/admin/ui/bloc/create_admin_bloc.dart';
 import 'features/admin/ui/screens/admin_dashboard_screen.dart';
 import 'features/admin/ui/screens/create_admin_screen.dart';
-import 'features/auth/domain/usecases/confirm_new_password_usecase.dart';
-import 'features/auth/domain/usecases/delete_account_usecase.dart';
-import 'features/auth/domain/usecases/sign_out_usecase.dart';
-import 'features/auth/domain/usecases/update_profile_usecase.dart';
+import 'features/home/ui/screens/home_screen.dart';
+import 'features/login/ui/bloc/login_bloc.dart';
 import 'features/login/ui/bloc/set_password_bloc.dart';
+import 'features/login/ui/screens/login_screen.dart';
 import 'features/login/ui/screens/set_new_password_screen.dart';
+import 'features/login/ui/screens/welcome_screen.dart';
 import 'features/profile/ui/bloc/delete_bloc.dart';
 import 'features/profile/ui/bloc/logout_bloc.dart';
 import 'features/profile/ui/bloc/profile_bloc.dart';
 import 'features/profile/ui/screens/profile_screen.dart';
+import 'features/register/ui/bloc/register_bloc.dart';
+import 'features/register/ui/screens/register_screen.dart';
 import 'features/session/session_cubit.dart';
+import 'features/verify/ui/bloc/verify_bloc.dart';
+import 'features/verify/ui/screens/verify_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,10 +73,27 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
         routes: {
-          '/welcome':  (_) => const WelcomeScreen(),
-          '/login':    (_) => const LoginScreen(),
-          '/register': (_) => const RegisterScreen(),
-          '/verify':   (_) => const VerifyScreen(),
+          '/welcome': (_) => const WelcomeScreen(),
+          '/login': (_) => BlocProvider<LoginBloc>(
+                create: (_) => LoginBloc(
+                  SignInUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+                ),
+                child: const LoginScreen(),
+              ),
+          '/register': (_) => BlocProvider<RegisterBloc>(
+                create: (_) => RegisterBloc(
+                  SignUpUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+                ),
+                child: const RegisterScreen(),
+              ),
+          '/verify': (_) => BlocProvider<VerifyBloc>(
+                create: (_) => VerifyBloc(
+                  ConfirmSignUpUseCase(
+                    AuthRepositoryImpl(CognitoAuthDataSource()),
+                  ),
+                ),
+                child: const VerifyScreen(),
+              ),
           '/routing': (ctx) {
             final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
             return _RoutingGate(user: user);
@@ -78,26 +103,33 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
             return HomeScreen(user: user);
           },
           '/set-password': (_) => BlocProvider(
-            create: (_) => SetPasswordBloc(
-              ConfirmNewPasswordUseCase(
-                AuthRepositoryImpl(CognitoAuthDataSource()),
+                create: (_) => SetPasswordBloc(
+                  ConfirmNewPasswordUseCase(
+                    AuthRepositoryImpl(CognitoAuthDataSource()),
+                  ),
+                ),
+                child: const SetNewPasswordScreen(),
               ),
-            ),
-            child: const SetNewPasswordScreen(),
-          ),
           '/admin': (_) => BlocProvider(
-            create: (_) => LogoutBloc(
-              SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
-            ),
-            child: const AdminDashboardScreen(),
-          ),
+                create: (_) => LogoutBloc(
+                  SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+                ),
+                child: const AdminDashboardScreen(),
+              ),
           '/superadmin': (_) => BlocProvider(
-            create: (_) => LogoutBloc(
-              SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
-            ),
-            child: const AdminDashboardScreen(),
-          ),
-          '/create-admin': (_) => const CreateAdminScreen(),
+                create: (_) => LogoutBloc(
+                  SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+                ),
+                child: const AdminDashboardScreen(),
+              ),
+          '/create-admin': (_) => BlocProvider<CreateAdminBloc>(
+                create: (_) => CreateAdminBloc(
+                  CreateAdminUseCase(
+                    AuthRepositoryImpl(CognitoAuthDataSource()),
+                  ),
+                ),
+                child: const CreateAdminScreen(),
+              ),
           '/profile': (ctx) {
             final userId = ctx.read<SessionCubit>().state!.id;
             return MultiBlocProvider(
