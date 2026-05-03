@@ -2,6 +2,76 @@
 
 Plataforma móvil para el seguimiento de partidos deportivos universitarios (Fútbol y Voleibol) en tiempo real.
 
+---
+
+## Sprint 1 — Autenticación de Usuarios
+
+### Contexto
+
+IcesiScore maneja tres tipos de usuario, cada uno con un flujo de autenticación propio:
+
+| Tipo | Descripción | Cómo se crea |
+|------|-------------|--------------|
+| **Usuario Regular** | Aficionado que consulta partidos y estadísticas en tiempo real | Auto-registro desde la app |
+| **Admin** | Gestiona equipos, ligas y partidos en el dashboard administrativo | Lo crea el Superadmin desde la app |
+| **Superadmin** | Control total de la plataforma; puede promover otros admins | Se crea con el script de seed (`make db-migrate`) |
+
+---
+
+### Flujo 1 — Registro (Usuario Regular)
+
+El registro aplica exclusivamente a usuarios regulares. Admins y Superadmin se crean desde dentro de la plataforma.
+
+1. Abre la app → pantalla **Bienvenida**.
+2. Toca **Crear cuenta**.
+3. Completa el formulario de onboarding:
+   - Nombre completo
+   - Correo electrónico (`@uicesi.edu.co` o cualquier dominio válido)
+   - Teléfono
+   - Universidad
+   - Contraseña (y confirmación)
+4. Toca **Registrarse** → se envía un código de verificación al correo ingresado.
+5. En la pantalla **Verificar cuenta**, ingresa el código de 6 dígitos.
+6. Al confirmar, la app navega automáticamente a la pantalla principal (**Home**).
+
+---
+
+### Flujo 2 — Inicio de Sesión
+
+El mismo flujo de login aplica para los tres tipos de usuario; la app enruta a la pantalla correcta según el rol.
+
+1. Abre la app → pantalla **Bienvenida**.
+2. Toca **Iniciar sesión**.
+3. Ingresa correo y contraseña.
+4. Toca **Entrar**.
+   - **Usuario Regular** → navega a **Home** (feed de partidos).
+   - **Admin** → navega al **Dashboard de Administrador**.
+   - **Superadmin** → navega al **Dashboard de Superadmin** (incluye opción de crear admins).
+
+> Si el usuario fue creado por el Superadmin y es su primer inicio de sesión, la app lo redirige a la pantalla **Establecer nueva contraseña** antes de continuar.
+
+---
+
+### Flujo 3 — Resumen del Perfil
+
+Accesible para todos los tipos de usuario una vez autenticados.
+
+**Desde Home (Usuario Regular):**
+- Toca el ícono de perfil (esquina superior derecha o barra de navegación) → pantalla **Perfil**.
+
+**Desde el Dashboard (Admin / Superadmin):**
+- Toca el botón de perfil / menú → pantalla **Perfil**.
+
+La pantalla de Perfil muestra:
+- Nombre completo (editable)
+- Correo electrónico (solo lectura)
+- Teléfono (editable)
+- Rol del usuario (`USUARIO`, `ADMINISTRADOR` o `SUPER ADMIN`)
+
+Desde el perfil también es posible **cerrar sesión** o **eliminar la cuenta**.
+
+---
+
 ## Frontend: Reglas de Desarrollo (Flutter)
 
 La arquitectura del frontend sigue **Clean Architecture + BLoC**. Cada feature vive en `lib/features/<feature>/` con capas `domain/`, `data/` y `ui/`.
