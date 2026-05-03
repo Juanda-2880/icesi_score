@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../domain/entities/auth_user.dart';
+import 'local_auth_data_source.dart';
 
 const _kSessionKey = 'icesi_session';
 
-class SecureStorageDataSource {
+class SecureStorageDataSource implements LocalAuthDataSource {
   final FlutterSecureStorage _storage;
 
   SecureStorageDataSource([FlutterSecureStorage? storage])
       : _storage = storage ?? const FlutterSecureStorage();
 
+  @override
   Future<void> saveSession(AuthUser user) async {
     final json = jsonEncode({
       'id': user.id,
@@ -22,6 +24,7 @@ class SecureStorageDataSource {
     await _storage.write(key: _kSessionKey, value: json);
   }
 
+  @override
   Future<AuthUser?> getSession() async {
     final raw = await _storage.read(key: _kSessionKey);
     if (raw == null) return null;
@@ -36,5 +39,6 @@ class SecureStorageDataSource {
     );
   }
 
+  @override
   Future<void> clearSession() => _storage.delete(key: _kSessionKey);
 }

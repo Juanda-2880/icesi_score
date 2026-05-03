@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../auth/data/source/cognito_auth_data_source.dart';
+import '../../../auth/domain/exceptions/auth_exception.dart';
 import '../../../auth/domain/usecases/confirm_new_password_usecase.dart';
 import 'set_password_event.dart';
 import 'set_password_state.dart';

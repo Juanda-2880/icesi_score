@@ -2,15 +2,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../domain/entities/auth_user.dart';
 import '../../../../amplifyconfiguration.dart' show apiBaseUrl;
+import 'user_profile_data_source.dart';
 
 const _kApiBase = apiBaseUrl;
 
-class UserProfileApiDataSource {
+class UserProfileApiDataSource implements UserProfileDataSource {
   final http.Client _client;
 
   UserProfileApiDataSource([http.Client? client])
       : _client = client ?? http.Client();
 
+  @override
   Future<AuthUser> fetchProfile(String idToken) async {
     final response = await _client.get(
       Uri.parse('$_kApiBase/user/profile'),
@@ -24,6 +26,7 @@ class UserProfileApiDataSource {
     throw Exception('Error al obtener el perfil (${response.statusCode}).');
   }
 
+  @override
   Future<AuthUser> updateProfile({
     required String idToken,
     required String id,
@@ -52,6 +55,7 @@ class UserProfileApiDataSource {
     throw Exception('Error al actualizar el perfil (${response.statusCode}).');
   }
 
+  @override
   Future<void> deleteAccount({required String idToken}) async {
     final response = await _client.delete(
       Uri.parse('$_kApiBase/user'),
@@ -63,6 +67,7 @@ class UserProfileApiDataSource {
     }
   }
 
+  @override
   Future<void> createAdminUser({
     required String idToken,
     required String fullName,

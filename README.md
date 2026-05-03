@@ -72,9 +72,74 @@ Desde el perfil también es posible **cerrar sesión** o **eliminar la cuenta**.
 
 ---
 
-## Frontend: Reglas de Desarrollo (Flutter)
+## Arquitectura Frontend: Clean Architecture + BLoC
 
-La arquitectura del frontend sigue **Clean Architecture + BLoC**. Cada feature vive en `lib/features/<feature>/` con capas `domain/`, `data/` y `ui/`.
+El frontend sigue **Clean Architecture** combinada con **BLoC**. La regla fundamental es que las capas externas dependen de las internas, nunca al revés. El dominio no conoce Flutter, ni Amplify, ni HTTP.
+
+### Las tres capas
+
+Cada feature vive en `lib/features/<feature>/` con tres subcarpetas que representan cada capa:
+
+```
+lib/features/auth/
+├── domain/          ← núcleo puro, sin dependencias externas
+│   ├── entities/    ← modelos de negocio (AuthUser)
+│   ├── exceptions/  ← errores del dominio (AuthException)
+│   ├── repository/  ← contrato abstracto (AuthRepository)
+│   └── usecases/    ← una clase por operación de negocio
+├── data/            ← implementa los contratos del dominio
+│   ├── repository/  ← AuthRepositoryImpl (orquesta los datasources)
+│   └── source/      ← datasources abstractos + implementaciones con SDK
+└── ui/              ← presentación
+    ├── bloc/        ← BLoC: eventos, estados, lógica de presentación
+    └── screens/     ← widgets que renderizan la UI
+```
+
+### Dirección de dependencias
+
+```
+ui/screens  →  ui/bloc  →  domain/usecases  →  domain/repository (abstracto)
+                                                        ↑
+                                              data/repository (implementación)
+                                                        ↓
+                                              data/source (datasources)
+```
+
+- **`domain/`** no importa nada externo. Es Dart puro. Si se borra Flutter del proyecto, el dominio sigue compilando.
+- **`data/`** depende del dominio porque implementa sus contratos (`AuthRepositoryImpl implements AuthRepository`).
+- **`ui/`** depende solo del dominio (usa los use cases). Nunca importa nada de `data/`.
+
+### Capa de Dominio
+
+`AuthRepository` es una clase abstracta que declara el contrato de autenticación sin saber cómo se implementa. Los use cases (`SignInUseCase`, `SignUpUseCase`, etc.) encapsulan cada operación de negocio y dependen únicamente de esa abstracción. Las excepciones (`AuthException`, `NewPasswordRequiredException`) también viven en el dominio porque son conceptos del negocio que tanto los datasources como los BLoCs necesitan referenciar.
+
+### Capa de Data
+
+`AuthRepositoryImpl` implementa `AuthRepository` orquestando tres datasources:
+- `CognitoAuthDataSource` — autenticación vía Amplify SDK (AWS Cognito)
+- `SecureStorageDataSource` — persistencia de sesión local con `flutter_secure_storage`
+- `UserProfileApiDataSource` — perfil de usuario vía HTTP al API Gateway
+
+Cada datasource concreto implementa su respectiva interfaz abstracta (`RemoteAuthDataSource`, `LocalAuthDataSource`, `UserProfileDataSource`), aplicando inversión de dependencias en toda la cadena.
+
+### Capa de Presentación (BLoC)
+
+Cada pantalla tiene su BLoC. El BLoC recibe eventos de la UI, llama al use case correspondiente y emite estados. Nunca instancia repositorios ni datasources directamente.
+
+El ensamblado de dependencias ocurre exclusivamente en `main.dart` (composition root):
+
+```dart
+'/login': (_) => BlocProvider<LoginBloc>(
+  create: (_) => LoginBloc(
+    SignInUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+  ),
+  child: const LoginScreen(),
+),
+```
+
+`LoginScreen` no sabe que existe Cognito. Solo sabe que hay un `LoginBloc` disponible en el árbol de widgets.
+
+### Reglas de Desarrollo
 
 1. **Uso obligatorio de `Key`:** Todos los widgets deben inicializarse con un `key` (ej. `super.key` en el constructor) para evitar ciclos de re-renderizado innecesarios en Flutter.
 
