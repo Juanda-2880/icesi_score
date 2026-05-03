@@ -18,7 +18,10 @@ class VerifyScreen extends StatefulWidget {
 class _VerifyScreenState extends State<VerifyScreen> {
   late final VerifyBloc _bloc;
   late final String _email;
-  final _codeController = TextEditingController();
+  final List<TextEditingController> _digitControllers =
+      List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes =
+      List.generate(6, (_) => FocusNode());
 
   @override
   void initState() {
@@ -37,12 +40,13 @@ class _VerifyScreenState extends State<VerifyScreen> {
   @override
   void dispose() {
     _bloc.close();
-    _codeController.dispose();
+    for (final c in _digitControllers) { c.dispose(); }
+    for (final f in _focusNodes) { f.dispose(); }
     super.dispose();
   }
 
   void _submit() {
-    final code = _codeController.text.trim();
+    final code = _digitControllers.map((c) => c.text).join();
     if (code.length != 6) {
       _showError('El código debe tener exactamente 6 dígitos.');
       return;
@@ -99,14 +103,36 @@ class _VerifyScreenState extends State<VerifyScreen> {
                       style: const TextStyle(color: Colors.grey, fontSize: 16),
                     ),
                     const SizedBox(height: 20),
-                    TextField(
-                      controller: _codeController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter 6-digit code',
-                        counterText: '',
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(6, (i) => SizedBox(
+                        width: 44,
+                        child: TextField(
+                          controller: _digitControllers[i],
+                          focusNode: _focusNodes[i],
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          maxLength: 1,
+                          decoration: InputDecoration(
+                            counterText: '',
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.grey),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 2),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            if (value.length == 1 && i < 5) {
+                              _focusNodes[i + 1].requestFocus();
+                            } else if (value.isEmpty && i > 0) {
+                              _focusNodes[i - 1].requestFocus();
+                            }
+                          },
+                        ),
+                      )),
                     ),
                     const SizedBox(height: 40),
                     LoadingButton(
