@@ -90,3 +90,4 @@ TASKS.md
 # Lambda build artifacts
 backend/post_confirmation/package/
 backend/post_confirmation/lambda_function.zip
+lib/amplifyconfiguration.dart
