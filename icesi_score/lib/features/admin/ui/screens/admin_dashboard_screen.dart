@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../session/session_cubit.dart';
+import '../../../match/ui/bloc/match_feed_bloc.dart';
+import '../../../match/ui/bloc/match_feed_state.dart';
 import '../../../profile/ui/bloc/logout_bloc.dart';
 import '../../../profile/ui/bloc/logout_event.dart';
 import '../../../profile/ui/bloc/logout_state.dart';
+import '../../../session/session_cubit.dart';
+import '../../../../widgets/match/match_feed_list.dart';
+import '../../../../widgets/match/sport_selector.dart';
 
 const _purple = Color(0xFF6C63FF);
 
@@ -85,6 +89,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
         body: isSuperAdmin ? _SuperAdminBody() : _AdminBody(),
+        floatingActionButton: isSuperAdmin
+            ? null
+            : FloatingActionButton(
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/create-match'),
+                backgroundColor: _purple,
+                tooltip: 'Nuevo partido',
+                child: const Icon(Icons.add),
+              ),
       ),
     );
   }
@@ -123,18 +136,60 @@ class _SuperAdminBody extends StatelessWidget {
   }
 }
 
-class _AdminBody extends StatelessWidget {
+class _AdminBody extends StatefulWidget {
+  @override
+  State<_AdminBody> createState() => _AdminBodyState();
+}
+
+class _AdminBodyState extends State<_AdminBody> {
+  int _selectedSport = 0;
+
+  void _onMatchTap(String matchId) {
+    Navigator.pushNamed(context, '/live-mode', arguments: matchId);
+  }
+
+  Widget _buildFeedState<B extends MatchFeedBloc>() {
+    return BlocBuilder<B, MatchFeedState>(
+      builder: (ctx, state) {
+        if (state is MatchFeedLoadingState) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state is MatchFeedErrorState) {
+          return Center(
+            child: Text(state.message,
+                style: const TextStyle(color: Colors.grey)),
+          );
+        }
+        if (state is MatchFeedLoadedState) {
+          return MatchFeedList(
+            matches: state.matches,
+            onMatchTap: _onMatchTap,
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.sports, size: 64),
-          SizedBox(height: 16),
-          Text('Módulo de partidos próximamente'),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SportSelector(
+          selectedIndex: _selectedSport,
+          onSelected: (i) => setState(() => _selectedSport = i),
+        ),
+        Expanded(
+          child: IndexedStack(
+            index: _selectedSport,
+            children: [
+              _buildFeedState<FootballFeedBloc>(),
+              _buildFeedState<VolleyballFeedBloc>(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
