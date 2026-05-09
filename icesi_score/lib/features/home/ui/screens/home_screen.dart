@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../auth/domain/entities/auth_user.dart';
 import '../../../match/ui/bloc/match_feed_bloc.dart';
+import '../../../match/ui/bloc/match_feed_event.dart';
 import '../../../match/ui/bloc/match_feed_state.dart';
 import '../../../session/session_cubit.dart';
 import '../../../../widgets/common/app_top_bar.dart';
@@ -26,6 +27,11 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushNamed(context, route, arguments: matchId);
   }
 
+  Future<void> _refresh<B extends MatchFeedBloc>(BuildContext ctx) async {
+    ctx.read<B>().add(const MatchFeedStartedEvent());
+    await ctx.read<B>().stream.firstWhere((s) => s is! MatchFeedLoadingState);
+  }
+
   Widget _buildFeedState<B extends MatchFeedBloc>(BuildContext context) {
     return BlocBuilder<B, MatchFeedState>(
       builder: (ctx, state) {
@@ -33,15 +39,27 @@ class _HomeScreenState extends State<HomeScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (state is MatchFeedErrorState) {
-          return Center(
-            child: Text(state.message,
-                style: const TextStyle(color: Colors.grey)),
+          return RefreshIndicator(
+            onRefresh: () => _refresh<B>(ctx),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 100),
+                  child: Center(
+                    child: Text(state.message,
+                        style: const TextStyle(color: Colors.grey)),
+                  ),
+                ),
+              ],
+            ),
           );
         }
         if (state is MatchFeedLoadedState) {
           return MatchFeedList(
             matches: state.matches,
             onMatchTap: (id) => _onMatchTap(context, id),
+            onRefresh: () => _refresh<B>(ctx),
           );
         }
         return const SizedBox.shrink();

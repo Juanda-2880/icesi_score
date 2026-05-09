@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../match/ui/bloc/match_feed_bloc.dart';
+import '../../../match/ui/bloc/match_feed_event.dart';
 import '../../../match/ui/bloc/match_feed_state.dart';
 import '../../../profile/ui/bloc/logout_bloc.dart';
 import '../../../profile/ui/bloc/logout_event.dart';
@@ -92,8 +93,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         floatingActionButton: isSuperAdmin
             ? null
             : FloatingActionButton(
-                onPressed: () =>
-                    Navigator.pushNamed(context, '/create-match'),
+                onPressed: () async {
+                  final footballBloc = context.read<FootballFeedBloc>();
+                  final volleyballBloc = context.read<VolleyballFeedBloc>();
+                  await Navigator.pushNamed(context, '/create-match');
+                  if (!mounted) return;
+                  footballBloc.add(const MatchFeedStartedEvent());
+                  volleyballBloc.add(const MatchFeedStartedEvent());
+                },
                 backgroundColor: _purple,
                 tooltip: 'Nuevo partido',
                 child: const Icon(Icons.add),
@@ -148,6 +155,11 @@ class _AdminBodyState extends State<_AdminBody> {
     Navigator.pushNamed(context, '/live-mode', arguments: matchId);
   }
 
+  Future<void> _refresh<B extends MatchFeedBloc>(BuildContext ctx) async {
+    ctx.read<B>().add(const MatchFeedStartedEvent());
+    await ctx.read<B>().stream.firstWhere((s) => s is! MatchFeedLoadingState);
+  }
+
   Widget _buildFeedState<B extends MatchFeedBloc>() {
     return BlocBuilder<B, MatchFeedState>(
       builder: (ctx, state) {
@@ -155,15 +167,27 @@ class _AdminBodyState extends State<_AdminBody> {
           return const Center(child: CircularProgressIndicator());
         }
         if (state is MatchFeedErrorState) {
-          return Center(
-            child: Text(state.message,
-                style: const TextStyle(color: Colors.grey)),
+          return RefreshIndicator(
+            onRefresh: () => _refresh<B>(ctx),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 100),
+                  child: Center(
+                    child: Text(state.message,
+                        style: const TextStyle(color: Colors.grey)),
+                  ),
+                ),
+              ],
+            ),
           );
         }
         if (state is MatchFeedLoadedState) {
           return MatchFeedList(
             matches: state.matches,
             onMatchTap: _onMatchTap,
+            onRefresh: () => _refresh<B>(ctx),
           );
         }
         return const SizedBox.shrink();

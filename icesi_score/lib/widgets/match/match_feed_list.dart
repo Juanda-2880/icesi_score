@@ -20,33 +20,47 @@ String _teamInitials(String name) =>
 class MatchFeedList extends StatelessWidget {
   final List<Match> matches;
   final Function(String matchId) onMatchTap;
+  final Future<void> Function()? onRefresh;
 
   const MatchFeedList({
     super.key,
     required this.matches,
     required this.onMatchTap,
+    this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (matches.isEmpty) {
-      return const Center(
-        child: Text(
-          'No hay partidos disponibles',
-          style: TextStyle(color: Colors.grey, fontSize: 14),
-        ),
-      );
-    }
+    final list = matches.isEmpty
+        ? ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: const [
+              Padding(
+                padding: EdgeInsets.only(top: 100),
+                child: Center(
+                  child: Text(
+                    'No hay partidos disponibles',
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                ),
+              ),
+            ],
+          )
+        : ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            itemCount: matches.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (_, i) => _MatchListItem(
+              match: matches[i],
+              onTap: () => onMatchTap(matches[i].id),
+            ),
+          );
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      itemCount: matches.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
-      itemBuilder: (_, i) => _MatchListItem(
-        match: matches[i],
-        onTap: () => onMatchTap(matches[i].id),
-      ),
-    );
+    if (onRefresh != null) {
+      return RefreshIndicator(onRefresh: onRefresh!, child: list);
+    }
+    return list;
   }
 }
 
