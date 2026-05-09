@@ -72,6 +72,73 @@ Desde el perfil también es posible **cerrar sesión** o **eliminar la cuenta**.
 
 ---
 
+## Sprint 2 — Gestión y Visualización de Partidos
+
+### Contexto
+
+Sprint 2 introduce las dos funcionalidades centrales de la plataforma: la creación de partidos por parte de los Admins y el feed de partidos visible para todos los usuarios autenticados.
+
+---
+
+### Flujo 1 — Creación de Partido (US-08)
+
+Solo disponible para el rol **Admin**. El botón flotante (FAB) no aparece para Superadmins.
+
+1. Inicia sesión como **Admin** → **Dashboard de Administrador**.
+2. Toca el botón **+** (esquina inferior derecha).
+3. Selecciona el deporte con las tarjetas de selección:
+   - **Fútbol** o **Voleibol**
+   - La tarjeta activa muestra un borde azul.
+4. Elige el **equipo local** y el **equipo visitante** en los desplegables.
+   - Los equipos se filtran automáticamente según el deporte seleccionado.
+   - No se puede seleccionar el mismo equipo en ambos campos.
+5. Completa los campos obligatorios:
+
+| Campo | Tipo |
+|-------|------|
+| Fecha del partido | Selector de fecha (YYYY-MM-DD) |
+| Hora del partido | Selector de hora (HH:MM) |
+| Liga | Desplegable con las ligas existentes |
+| Sede / Cancha | Texto libre |
+
+6. (Opcional) Agrega notas adicionales en el campo de texto.
+7. Toca **Crear partido**.
+   - Campos faltantes o conflicto de datos en la API → diálogo de error con el mensaje correspondiente.
+   - Éxito → snackbar de confirmación, regresa al dashboard y recarga el feed automáticamente.
+
+El partido se inserta con `status = SCHEDULED`. El campo `id_admin_creador` se toma del `sub` del JWT del usuario autenticado.
+
+---
+
+### Flujo 2 — Feed de Partidos (US-05)
+
+Accesible para **todos los usuarios** autenticados. El **Admin** lo ve dentro del Dashboard de Administrador (reemplaza el bloque "próximamente"); el **Usuario Regular** lo ve en la pantalla **Home**.
+
+1. Inicia sesión con cualquier rol.
+2. La barra superior contiene un selector de deporte integrado, sin elevación ni separación visual respecto al AppBar:
+   - **Fútbol** | **Voleibol**
+   - El tab activo muestra un subrayado en azul.
+3. La lista de partidos se carga automáticamente al entrar a la pantalla.
+4. Cada elemento de la lista contiene:
+   - Una **etiqueta superior** independiente de la tarjeta (texto en gris claro, alineado a la izquierda):
+     - `SCHEDULED` → hora del partido (ej. "16:00")
+     - `IN_PROGRESS` → "LIVE"
+     - `FINISHED` → "Terminado"
+   - La **tarjeta del partido** con equipo local, equipo visitante y el área central:
+     - `SCHEDULED` → hora del partido
+     - `IN_PROGRESS` → badge LIVE + marcador en naranja
+     - `FINISHED` → marcador final en blanco (sin badge)
+
+> El marcador (`homeScore` / `awayScore`) solo se expone desde el backend cuando el partido está en `IN_PROGRESS` o `FINISHED`. Para partidos `SCHEDULED` la API devuelve `null` en esos campos.
+
+5. Desliza hacia abajo para recargar el feed manualmente (pull-to-refresh).
+6. El feed también se recarga de forma automática al regresar desde la pantalla de creación de partido.
+7. Toca una tarjeta para navegar al detalle según el rol:
+   - **Usuario Regular** → pantalla de detalle de partido (en desarrollo).
+   - **Admin** → panel de modo live (en desarrollo).
+
+---
+
 ## Arquitectura Frontend: Clean Architecture + BLoC
 
 El frontend sigue **Clean Architecture** combinada con **BLoC**. La regla fundamental es que las capas externas dependen de las internas, nunca al revés. El dominio no conoce Flutter, ni Amplify, ni HTTP.
