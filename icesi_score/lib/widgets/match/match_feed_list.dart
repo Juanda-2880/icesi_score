@@ -191,6 +191,39 @@ class _MatchListItemState extends State<_MatchListItem>
 
     final isScheduled = widget.match.status == 'SCHEDULED';
 
+    final buttons = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _ActionButton(
+          label: 'Editar',
+          color: const Color(0xFF6C63FF),
+          enabled: isScheduled,
+          onTap: isScheduled
+              ? () {
+                  _close();
+                  widget.onEditTap?.call();
+                }
+              : null,
+        ),
+        const SizedBox(width: 8),
+        _ActionButton(
+          label: 'Eliminar',
+          color: const Color(0xFFFF4444),
+          enabled: isScheduled,
+          onTap: isScheduled
+              ? () {
+                  _close();
+                  widget.onDeleteTap?.call();
+                }
+              : null,
+        ),
+      ],
+    );
+
+    // Buttons are at the right edge, opacity-0 at rest (so they don't bleed
+    // through the card's transparent eyebrow area). As _controller animates
+    // from 0→1, the card slides left AND the buttons fade in simultaneously.
+    // IgnorePointer blocks taps while the panel is closed.
     return GestureDetector(
       onHorizontalDragUpdate: (details) {
         if (details.primaryDelta != null && details.primaryDelta! < -8) {
@@ -201,44 +234,23 @@ class _MatchListItemState extends State<_MatchListItem>
       },
       child: Stack(
         children: [
-          // Action buttons (revealed behind the card)
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: SizedBox(
-                width: _revealWidth,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _ActionButton(
-                      label: 'Editar',
-                      color: const Color(0xFF6C63FF),
-                      enabled: isScheduled,
-                      onTap: isScheduled
-                          ? () {
-                              _close();
-                              widget.onEditTap?.call();
-                            }
-                          : null,
-                    ),
-                    const SizedBox(width: 8),
-                    _ActionButton(
-                      label: 'Eliminar',
-                      color: const Color(0xFFFF4444),
-                      enabled: isScheduled,
-                      onTap: isScheduled
-                          ? () {
-                              _close();
-                              widget.onDeleteTap?.call();
-                            }
-                          : null,
-                    ),
-                  ],
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: _revealWidth,
+            child: IgnorePointer(
+              ignoring: !_isOpen,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (_, child) => Opacity(
+                  opacity: _controller.value,
+                  child: child,
                 ),
+                child: Center(child: buttons),
               ),
             ),
           ),
-          // Card sliding left
           AnimatedBuilder(
             animation: _offsetAnim,
             builder: (_, child) => Transform.translate(
