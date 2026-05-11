@@ -16,4 +16,16 @@ abstract class MatchRepository {
     required String venue,
     String? notes,
   });
+  Future<void> updateMatch({
+    required String id,
+    required String sport,
+    required String homeTeamId,
+    required String awayTeamId,
+    required String leagueId,
+    required String matchDate,
+    required String matchTime,
+    required String venue,
+    String? notes,
+  });
+  Future<void> deleteMatch(String id);
 }

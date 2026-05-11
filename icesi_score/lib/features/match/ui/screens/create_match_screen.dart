@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/labeled_text_field.dart';
+import '../../domain/entities/match.dart';
 import '../../domain/entities/team.dart';
 import '../bloc/create_match_bloc.dart';
 import '../bloc/create_match_event.dart';
 import '../bloc/create_match_state.dart';
 
 class CreateMatchScreen extends StatefulWidget {
-  const CreateMatchScreen({super.key});
+  final Match? initialMatch;
+
+  const CreateMatchScreen({super.key, this.initialMatch});
 
   @override
   State<CreateMatchScreen> createState() => _CreateMatchScreenState();
@@ -25,11 +28,28 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   String? _selectedAwayTeamId;
   String? _selectedLeagueId;
 
+  bool get _isEditMode => widget.initialMatch != null;
+
   @override
   void initState() {
     super.initState();
+    final initial = widget.initialMatch;
+    if (initial != null) {
+      _dateController.text = initial.matchDate ?? '';
+      _timeController.text = initial.matchTime ?? '';
+      _venueController.text = initial.venue ?? '';
+      _notesController.text = initial.notes ?? '';
+      _selectedHomeTeamId = initial.homeTeamId;
+      _selectedAwayTeamId = initial.awayTeamId;
+      _selectedLeagueId = initial.leagueId;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (!mounted) return;
+      if (initial != null) {
+        context
+            .read<CreateMatchBloc>()
+            .add(CreateMatchEditStartedEvent(initial));
+      } else {
         context.read<CreateMatchBloc>().add(const CreateMatchStartedEvent());
       }
     });
@@ -92,17 +112,30 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
 
   void _submit(BuildContext ctx) {
     if (!_formKey.currentState!.validate()) return;
-    ctx.read<CreateMatchBloc>().add(CreateMatchSubmittedEvent(
-      homeTeamId: _selectedHomeTeamId!,
-      awayTeamId: _selectedAwayTeamId!,
-      leagueId: _selectedLeagueId!,
-      matchDate: _dateController.text.trim(),
-      matchTime: _timeController.text.trim(),
-      venue: _venueController.text.trim(),
-      notes: _notesController.text.trim().isEmpty
-          ? null
-          : _notesController.text.trim(),
-    ));
+    final notes = _notesController.text.trim().isEmpty
+        ? null
+        : _notesController.text.trim();
+    if (_isEditMode) {
+      ctx.read<CreateMatchBloc>().add(EditMatchSubmittedEvent(
+        homeTeamId: _selectedHomeTeamId!,
+        awayTeamId: _selectedAwayTeamId!,
+        leagueId: _selectedLeagueId!,
+        matchDate: _dateController.text.trim(),
+        matchTime: _timeController.text.trim(),
+        venue: _venueController.text.trim(),
+        notes: notes,
+      ));
+    } else {
+      ctx.read<CreateMatchBloc>().add(CreateMatchSubmittedEvent(
+        homeTeamId: _selectedHomeTeamId!,
+        awayTeamId: _selectedAwayTeamId!,
+        leagueId: _selectedLeagueId!,
+        matchDate: _dateController.text.trim(),
+        matchTime: _timeController.text.trim(),
+        venue: _venueController.text.trim(),
+        notes: notes,
+      ));
+    }
   }
 
   void _showError(BuildContext ctx, String message) {
@@ -128,7 +161,13 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         if (state is CreateMatchSuccessState) {
           Navigator.of(ctx).pop();
           ScaffoldMessenger.of(ctx).showSnackBar(
-            const SnackBar(content: Text('Partido creado exitosamente ✓')),
+            SnackBar(
+              content: Text(
+                state.isEdit
+                    ? 'Cambios guardados con éxito ✓'
+                    : 'Partido creado exitosamente ✓',
+              ),
+            ),
           );
         } else if (state is CreateMatchFailureState) {
           _showError(ctx, state.message);
@@ -137,7 +176,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       child: Scaffold(
         appBar: AppBar(
           leading: const BackButton(),
-          title: const Text('Nuevo Partido'),
+          title: Text(_isEditMode ? 'Editar Partido' : 'Nuevo Partido'),
         ),
         body: BlocBuilder<CreateMatchBloc, CreateMatchState>(
           builder: (ctx, state) {
@@ -171,6 +210,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
               formKey: _formKey,
               formData: formData,
               isSubmitting: isSubmitting,
+              isEditMode: _isEditMode,
               dateController: _dateController,
               timeController: _timeController,
               venueController: _venueController,
@@ -205,6 +245,7 @@ class _MatchForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final CreateMatchFormData formData;
   final bool isSubmitting;
+  final bool isEditMode;
   final TextEditingController dateController;
   final TextEditingController timeController;
   final TextEditingController venueController;
@@ -225,6 +266,7 @@ class _MatchForm extends StatelessWidget {
     required this.formKey,
     required this.formData,
     required this.isSubmitting,
+    required this.isEditMode,
     required this.dateController,
     required this.timeController,
     required this.venueController,
@@ -418,7 +460,9 @@ class _MatchForm extends StatelessWidget {
                         )
                       : ElevatedButton(
                           onPressed: onSubmit,
-                          child: const Text('Crear Partido'),
+                          child: Text(
+                            isEditMode ? 'Guardar Cambios' : 'Crear Partido',
+                          ),
                         ),
                 ),
               ],

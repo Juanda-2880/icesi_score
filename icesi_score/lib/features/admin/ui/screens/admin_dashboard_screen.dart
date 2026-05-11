@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../match/domain/entities/match.dart';
+import '../../../match/ui/bloc/create_match_bloc.dart';
+import '../../../match/ui/bloc/create_match_event.dart';
+import '../../../match/ui/bloc/create_match_state.dart';
 import '../../../match/ui/bloc/match_feed_bloc.dart';
 import '../../../match/ui/bloc/match_feed_event.dart';
 import '../../../match/ui/bloc/match_feed_state.dart';
@@ -89,7 +93,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ],
         ),
-        body: isSuperAdmin ? _SuperAdminBody() : _AdminBody(),
+        body: isSuperAdmin ? _SuperAdminBody() : const _AdminBody(),
         floatingActionButton: isSuperAdmin
             ? null
             : FloatingActionButton(
@@ -144,6 +148,8 @@ class _SuperAdminBody extends StatelessWidget {
 }
 
 class _AdminBody extends StatefulWidget {
+  const _AdminBody();
+
   @override
   State<_AdminBody> createState() => _AdminBodyState();
 }
@@ -151,8 +157,53 @@ class _AdminBody extends StatefulWidget {
 class _AdminBodyState extends State<_AdminBody> {
   int _selectedSport = 0;
 
+  void _reloadFeeds() {
+    context.read<FootballFeedBloc>().add(const MatchFeedStartedEvent());
+    context.read<VolleyballFeedBloc>().add(const MatchFeedStartedEvent());
+  }
+
   void _onMatchTap(String matchId) {
     Navigator.pushNamed(context, '/live-mode', arguments: matchId);
+  }
+
+  void _onEditTap(Match match) async {
+    final footballBloc = context.read<FootballFeedBloc>();
+    final volleyballBloc = context.read<VolleyballFeedBloc>();
+    await Navigator.pushNamed(context, '/create-match', arguments: match);
+    if (!mounted) return;
+    footballBloc.add(const MatchFeedStartedEvent());
+    volleyballBloc.add(const MatchFeedStartedEvent());
+  }
+
+  void _onDeleteTap(Match match) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Eliminar partido'),
+        content: const Text(
+          '¿Estás seguro de que deseas eliminar este partido? '
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              context
+                  .read<CreateMatchBloc>()
+                  .add(DeleteMatchRequestedEvent(match.id));
+            },
+            child: const Text(
+              'Confirmar',
+              style: TextStyle(color: Color(0xFFFF4444)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _refresh<B extends MatchFeedBloc>(BuildContext ctx) async {
@@ -188,6 +239,9 @@ class _AdminBodyState extends State<_AdminBody> {
             matches: state.matches,
             onMatchTap: _onMatchTap,
             onRefresh: () => _refresh<B>(ctx),
+            isAdmin: true,
+            onEditTap: _onEditTap,
+            onDeleteTap: _onDeleteTap,
           );
         }
         return const SizedBox.shrink();
@@ -197,23 +251,47 @@ class _AdminBodyState extends State<_AdminBody> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SportSelector(
-          selectedIndex: _selectedSport,
-          onSelected: (i) => setState(() => _selectedSport = i),
-        ),
-        Expanded(
-          child: IndexedStack(
-            index: _selectedSport,
-            children: [
-              _buildFeedState<FootballFeedBloc>(),
-              _buildFeedState<VolleyballFeedBloc>(),
-            ],
+    return BlocListener<CreateMatchBloc, CreateMatchState>(
+      listener: (ctx, state) {
+        if (state is DeleteMatchSuccessState) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(content: Text('Partido eliminado')),
+          );
+          _reloadFeeds();
+        } else if (state is CreateMatchFailureState) {
+          showDialog<void>(
+            context: ctx,
+            builder: (_) => AlertDialog(
+              title: const Text('Error'),
+              content: Text(state.message),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Entendido'),
+                ),
+              ],
+            ),
+          );
+        }
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SportSelector(
+            selectedIndex: _selectedSport,
+            onSelected: (i) => setState(() => _selectedSport = i),
           ),
-        ),
-      ],
+          Expanded(
+            child: IndexedStack(
+              index: _selectedSport,
+              children: [
+                _buildFeedState<FootballFeedBloc>(),
+                _buildFeedState<VolleyballFeedBloc>(),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

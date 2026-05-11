@@ -83,4 +83,49 @@ class MatchRepositoryImpl implements MatchRepository {
       throw const MatchException('Error al crear el partido. Intenta de nuevo.');
     }
   }
+
+  @override
+  Future<void> updateMatch({
+    required String id,
+    required String sport,
+    required String homeTeamId,
+    required String awayTeamId,
+    required String leagueId,
+    required String matchDate,
+    required String matchTime,
+    required String venue,
+    String? notes,
+  }) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      await _matchApi.updateMatch(
+        idToken: idToken,
+        id: id,
+        sport: sport,
+        homeTeamId: homeTeamId,
+        awayTeamId: awayTeamId,
+        leagueId: leagueId,
+        matchDate: matchDate,
+        matchTime: matchTime,
+        venue: venue,
+        notes: notes,
+      );
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al editar el partido. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<void> deleteMatch(String id) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      await _matchApi.deleteMatch(idToken: idToken, id: id);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al eliminar el partido. Intenta de nuevo.');
+    }
+  }
 }

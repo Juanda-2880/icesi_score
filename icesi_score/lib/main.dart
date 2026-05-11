@@ -20,10 +20,13 @@ import 'features/admin/ui/bloc/create_admin_bloc.dart';
 import 'features/admin/ui/screens/admin_dashboard_screen.dart';
 import 'features/admin/ui/screens/create_admin_screen.dart';
 import 'features/match/data/repository/match_repository_impl.dart';
+import 'features/match/domain/entities/match.dart';
 import 'features/match/domain/usecases/create_match_usecase.dart';
+import 'features/match/domain/usecases/delete_match_usecase.dart';
 import 'features/match/domain/usecases/get_leagues_usecase.dart';
 import 'features/match/domain/usecases/get_matches_usecase.dart';
 import 'features/match/domain/usecases/get_teams_usecase.dart';
+import 'features/match/domain/usecases/update_match_usecase.dart';
 import 'features/match/ui/bloc/create_match_bloc.dart';
 import 'features/match/ui/bloc/match_feed_bloc.dart';
 import 'features/match/ui/bloc/match_feed_event.dart';
@@ -153,6 +156,18 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
                   create: (_) => VolleyballFeedBloc(getMatches)
                     ..add(const MatchFeedStartedEvent()),
                 ),
+                BlocProvider<CreateMatchBloc>(
+                  create: (_) {
+                    final repo = MatchRepositoryImpl(CognitoAuthDataSource());
+                    return CreateMatchBloc(
+                      GetTeamsUseCase(repo),
+                      GetLeaguesUseCase(repo),
+                      CreateMatchUseCase(repo),
+                      UpdateMatchUseCase(repo),
+                      DeleteMatchUseCase(repo),
+                    );
+                  },
+                ),
               ],
               child: const AdminDashboardScreen(),
             );
@@ -163,20 +178,21 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
                 ),
                 child: const AdminDashboardScreen(),
               ),
-          '/create-match': (_) => BlocProvider<CreateMatchBloc>(
-                create: (_) => CreateMatchBloc(
-                  GetTeamsUseCase(
-                    MatchRepositoryImpl(CognitoAuthDataSource()),
-                  ),
-                  GetLeaguesUseCase(
-                    MatchRepositoryImpl(CognitoAuthDataSource()),
-                  ),
-                  CreateMatchUseCase(
-                    MatchRepositoryImpl(CognitoAuthDataSource()),
-                  ),
-                ),
-                child: const CreateMatchScreen(),
+          '/create-match': (ctx) {
+            final initialMatch =
+                ModalRoute.of(ctx)?.settings.arguments as Match?;
+            final repo = MatchRepositoryImpl(CognitoAuthDataSource());
+            return BlocProvider<CreateMatchBloc>(
+              create: (_) => CreateMatchBloc(
+                GetTeamsUseCase(repo),
+                GetLeaguesUseCase(repo),
+                CreateMatchUseCase(repo),
+                UpdateMatchUseCase(repo),
+                DeleteMatchUseCase(repo),
               ),
+              child: CreateMatchScreen(initialMatch: initialMatch),
+            );
+          },
           '/create-admin': (_) => BlocProvider<CreateAdminBloc>(
                 create: (_) => CreateAdminBloc(
                   CreateAdminUseCase(

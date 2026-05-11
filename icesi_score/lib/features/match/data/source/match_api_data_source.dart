@@ -78,7 +78,9 @@ class MatchApiDataSource implements MatchDataSource {
                 homeTeamName: e['homeTeamName'] as String,
                 awayTeamId: e['awayTeamId'] as String,
                 awayTeamName: e['awayTeamName'] as String,
+                leagueId: e['leagueId'] as String,
                 leagueName: e['leagueName'] as String,
+                notes: e['notes'] as String?,
               ))
           .toList();
     }
@@ -134,5 +136,71 @@ class MatchApiDataSource implements MatchDataSource {
     }
 
     throw const MatchException('Error al crear el partido. Intenta de nuevo.');
+  }
+
+  @override
+  Future<void> updateMatch({
+    required String idToken,
+    required String id,
+    required String sport,
+    required String homeTeamId,
+    required String awayTeamId,
+    required String leagueId,
+    required String matchDate,
+    required String matchTime,
+    required String venue,
+    String? notes,
+  }) async {
+    final body = <String, dynamic>{
+      'sport': sport,
+      'homeTeamId': homeTeamId,
+      'awayTeamId': awayTeamId,
+      'leagueId': leagueId,
+      'matchDate': matchDate,
+      'matchTime': matchTime,
+      'venue': venue,
+    };
+    if (notes != null && notes.isNotEmpty) body['notes'] = notes;
+
+    final response = await _client.put(
+      Uri.parse('$_kApiBase/admin/matches/$id'),
+      headers: {
+        'Authorization': 'Bearer $idToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) return;
+
+    if (response.statusCode == 400 || response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'Datos inválidos.');
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('No tienes permisos para editar partidos.');
+    }
+
+    throw const MatchException('Error al editar el partido. Intenta de nuevo.');
+  }
+
+  @override
+  Future<void> deleteMatch({required String idToken, required String id}) async {
+    final response = await _client.delete(
+      Uri.parse('$_kApiBase/admin/matches/$id'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+
+    if (response.statusCode == 200) return;
+
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'El partido no puede eliminarse.');
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('No tienes permisos para eliminar partidos.');
+    }
+
+    throw const MatchException('Error al eliminar el partido. Intenta de nuevo.');
   }
 }

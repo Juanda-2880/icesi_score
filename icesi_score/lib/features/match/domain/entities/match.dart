@@ -11,7 +11,9 @@ class Match {
   final String homeTeamName;
   final String awayTeamId;
   final String awayTeamName;
+  final String leagueId;
   final String leagueName;
+  final String? notes;
 
   const Match({
     required this.id,
@@ -26,6 +28,8 @@ class Match {
     required this.homeTeamName,
     required this.awayTeamId,
     required this.awayTeamName,
+    required this.leagueId,
     required this.leagueName,
+    this.notes,
   });
 }

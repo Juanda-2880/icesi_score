@@ -1,4 +1,4 @@
-.PHONY: db-up db-migrate db-seed db-connect db-down venv superadmin-seed lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build
+.PHONY: db-up db-migrate db-seed db-connect db-down venv superadmin-seed lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -168,9 +168,39 @@ get-matches-build: venv
 	 echo "✓ Paquete Lambda listo en $$PKG"
 
 # ---------------------------------------------------------------------------
+# update-match-build — empaqueta update_match con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+update-match-build: venv
+	@PKG="backend/update_match/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/update_match/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
+# delete-match-build — empaqueta delete_match con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+delete-match-build: venv
+	@PKG="backend/delete_match/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/delete_match/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
 # db-up — abre acceso público temporal desde la IP del desarrollador
 # ---------------------------------------------------------------------------
-db-up: lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build
+db-up: lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build
 	@echo "Obteniendo IP pública…"
 	@MY_IP=$$(curl -s https://ifconfig.me) && \
 	 echo "IP detectada: $$MY_IP" && \

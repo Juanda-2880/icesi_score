@@ -68,7 +68,8 @@ def handler(event, _context):
                             THEN m.away_score ELSE NULL END AS away_score,
                        ht.id   AS home_team_id,   ht.name AS home_team_name,
                        at.id   AS away_team_id,   at.name AS away_team_name,
-                       l.name  AS league_name
+                       l.id    AS league_id,       l.name  AS league_name,
+                       m.notes
                 FROM match m
                 JOIN team ht ON m.home_team_id = ht.id
                 JOIN team at ON m.away_team_id = at.id
@@ -94,7 +95,9 @@ def handler(event, _context):
                 "homeTeamName": row[9],
                 "awayTeamId":   str(row[10]),
                 "awayTeamName": row[11],
-                "leagueName":   row[12],
+                "leagueId":     str(row[12]),
+                "leagueName":   row[13],
+                "notes":        row[14],
             }
             for row in rows
         ]

@@ -5,12 +5,16 @@ class CreateMatchFormData {
   final List<Team> allTeams;
   final List<League> leagues;
   final String selectedSport;
+  final String? editMatchId;
 
   const CreateMatchFormData({
     required this.allTeams,
     required this.leagues,
     this.selectedSport = 'FOOTBALL',
+    this.editMatchId,
   });
+
+  bool get isEditMode => editMatchId != null;
 
   List<Team> get filteredTeams =>
       allTeams.where((t) => t.sport == selectedSport).toList();
@@ -19,6 +23,7 @@ class CreateMatchFormData {
         allTeams: allTeams,
         leagues: leagues,
         selectedSport: sport,
+        editMatchId: editMatchId,
       );
 }
 
@@ -41,7 +46,8 @@ class CreateMatchSubmittingState extends CreateMatchState {
 }
 
 class CreateMatchSuccessState extends CreateMatchState {
-  const CreateMatchSuccessState();
+  final bool isEdit;
+  const CreateMatchSuccessState({this.isEdit = false});
 }
 
 // formData is null when the initial data load failed (show retry).
@@ -50,4 +56,12 @@ class CreateMatchFailureState extends CreateMatchState {
   final String message;
   final CreateMatchFormData? formData;
   const CreateMatchFailureState(this.message, [this.formData]);
+}
+
+class DeleteMatchInProgressState extends CreateMatchState {
+  const DeleteMatchInProgressState();
+}
+
+class DeleteMatchSuccessState extends CreateMatchState {
+  const DeleteMatchSuccessState();
 }

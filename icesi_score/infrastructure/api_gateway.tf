@@ -181,6 +181,58 @@ resource "aws_lambda_permission" "api_gw_create_match" {
 }
 
 # ---------------------------------------------------------------------------
+# PUT /admin/matches/{id} — edita un partido SCHEDULED (solo ADMIN o SUPERADMIN)
+# ---------------------------------------------------------------------------
+resource "aws_apigatewayv2_integration" "update_match_integration" {
+  api_id                 = aws_apigatewayv2_api.icesi_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.update_match.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "update_match_route" {
+  api_id             = aws_apigatewayv2_api.icesi_api.id
+  route_key          = "PUT /admin/matches/{id}"
+  target             = "integrations/${aws_apigatewayv2_integration.update_match_integration.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
+}
+
+resource "aws_lambda_permission" "api_gw_update_match" {
+  statement_id  = "AllowAPIGatewayInvokeUpdateMatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.update_match.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.icesi_api.execution_arn}/*/*"
+}
+
+# ---------------------------------------------------------------------------
+# DELETE /admin/matches/{id} — elimina un partido SCHEDULED (solo ADMIN o SUPERADMIN)
+# ---------------------------------------------------------------------------
+resource "aws_apigatewayv2_integration" "delete_match_integration" {
+  api_id                 = aws_apigatewayv2_api.icesi_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.delete_match.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "delete_match_route" {
+  api_id             = aws_apigatewayv2_api.icesi_api.id
+  route_key          = "DELETE /admin/matches/{id}"
+  target             = "integrations/${aws_apigatewayv2_integration.delete_match_integration.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
+}
+
+resource "aws_lambda_permission" "api_gw_delete_match" {
+  statement_id  = "AllowAPIGatewayInvokeDeleteMatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.delete_match.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.icesi_api.execution_arn}/*/*"
+}
+
+# ---------------------------------------------------------------------------
 # GET /matches — devuelve los partidos filtrados por sport (cualquier usuario autenticado)
 # ---------------------------------------------------------------------------
 resource "aws_apigatewayv2_integration" "get_matches_integration" {
