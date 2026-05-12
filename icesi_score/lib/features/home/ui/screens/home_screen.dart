@@ -23,6 +23,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedSport = 0;
 
   void _onMatchTap(BuildContext context, Match match) {
+    if (match.sport == 'VOLLEYBALL') {
+      Navigator.pushNamed(context, '/volleyball-detail', arguments: match);
+      return;
+    }
     final role = context.read<SessionCubit>().state?.role ?? '';
     final route = role == 'ADMIN' ? '/live-mode' : '/match-detail';
     Navigator.pushNamed(context, route, arguments: match);

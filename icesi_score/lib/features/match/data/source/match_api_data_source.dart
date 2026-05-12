@@ -6,6 +6,8 @@ import '../../domain/entities/match.dart';
 import '../../domain/entities/match_period.dart';
 import '../../domain/entities/soccer_event.dart';
 import '../../domain/entities/team.dart';
+import '../../domain/entities/volleyball_event.dart';
+import '../../domain/entities/volleyball_set.dart';
 import '../../domain/exceptions/match_exception.dart';
 import 'match_data_source.dart';
 
@@ -253,5 +255,48 @@ class MatchApiDataSource implements MatchDataSource {
     if (response.statusCode == 404) return null;
 
     throw MatchException('Error al obtener período (${response.statusCode}).');
+  }
+
+  @override
+  Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(
+    String idToken,
+    String matchId,
+  ) async {
+    final response = await _client.get(
+      Uri.parse('$_kApiBase/matches/$matchId/volleyball-data'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+      final sets = (data['sets'] as List<dynamic>)
+          .map((e) => VolleyballSet(
+                id: e['id'] as String,
+                setNumber: e['setNumber'] as int,
+                homeScore: e['homeScore'] as int,
+                awayScore: e['awayScore'] as int,
+                isActive: e['isActive'] as bool,
+                endTime: e['endTime'] as String?,
+              ))
+          .toList();
+
+      final events = (data['events'] as List<dynamic>)
+          .map((e) => VolleyballEvent(
+                id: e['id'] as String,
+                setId: e['setId'] as String,
+                setNumber: e['setNumber'] as int,
+                eventType: e['eventType'] as String,
+                playerName: e['playerName'] as String?,
+                teamId: e['teamId'] as String?,
+                teamName: e['teamName'] as String?,
+                scoreMoment: e['scoreMoment'] as String?,
+              ))
+          .toList();
+
+      return (sets: sets, events: events);
+    }
+
+    throw MatchException('Error al obtener datos del partido (${response.statusCode}).');
   }
 }

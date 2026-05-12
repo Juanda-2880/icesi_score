@@ -3,6 +3,8 @@ import '../entities/match.dart';
 import '../entities/match_period.dart';
 import '../entities/soccer_event.dart';
 import '../entities/team.dart';
+import '../entities/volleyball_event.dart';
+import '../entities/volleyball_set.dart';
 
 abstract class MatchRepository {
   Future<List<Team>> getTeams();
@@ -32,4 +34,5 @@ abstract class MatchRepository {
   Future<void> deleteMatch(String id);
   Future<List<SoccerEvent>> getSoccerEvents(String matchId);
   Future<MatchPeriod?> getActivePeriod(String matchId);
+  Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(String matchId);
 }

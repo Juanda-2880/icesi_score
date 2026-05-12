@@ -3,6 +3,8 @@ import '../../domain/entities/match.dart';
 import '../../domain/entities/match_period.dart';
 import '../../domain/entities/soccer_event.dart';
 import '../../domain/entities/team.dart';
+import '../../domain/entities/volleyball_event.dart';
+import '../../domain/entities/volleyball_set.dart';
 
 abstract class MatchDataSource {
   Future<List<Team>> getTeams(String idToken);
@@ -34,4 +36,5 @@ abstract class MatchDataSource {
   Future<void> deleteMatch({required String idToken, required String id});
   Future<List<SoccerEvent>> getSoccerEvents(String idToken, String matchId);
   Future<MatchPeriod?> getActivePeriod(String idToken, String matchId);
+  Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(String idToken, String matchId);
 }

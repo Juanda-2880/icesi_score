@@ -163,7 +163,8 @@ class _AdminBodyState extends State<_AdminBody> {
   }
 
   void _onMatchTap(Match match) {
-    Navigator.pushNamed(context, '/live-mode', arguments: match);
+    final route = match.sport == 'VOLLEYBALL' ? '/volleyball-detail' : '/live-mode';
+    Navigator.pushNamed(context, route, arguments: match);
   }
 
   void _onEditTap(Match match) async {

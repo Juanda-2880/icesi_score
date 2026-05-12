@@ -28,14 +28,17 @@ import 'features/match/domain/usecases/get_match_period_usecase.dart';
 import 'features/match/domain/usecases/get_matches_usecase.dart';
 import 'features/match/domain/usecases/get_soccer_events_usecase.dart';
 import 'features/match/domain/usecases/get_teams_usecase.dart';
+import 'features/match/domain/usecases/get_volleyball_data_usecase.dart';
 import 'features/match/domain/usecases/update_match_usecase.dart';
 import 'features/match/ui/bloc/create_match_bloc.dart';
 import 'features/match/ui/bloc/match_detail_bloc.dart';
 import 'features/match/ui/bloc/match_feed_bloc.dart';
 import 'features/match/ui/bloc/match_feed_event.dart';
+import 'features/match/ui/bloc/volleyball_detail_bloc.dart';
 import 'features/match/ui/screens/create_match_screen.dart';
 import 'features/match/ui/screens/live_mode_screen.dart';
 import 'features/match/ui/screens/match_detail_screen.dart';
+import 'features/match/ui/screens/volleyball_detail_screen.dart';
 import 'features/home/ui/screens/home_screen.dart';
 import 'features/login/ui/bloc/login_bloc.dart';
 import 'features/login/ui/bloc/set_password_bloc.dart';
@@ -214,6 +217,16 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
                 GetMatchPeriodUseCase(repo),
               ),
               child: MatchDetailScreen(match: match),
+            );
+          },
+          '/volleyball-detail': (ctx) {
+            final match = ModalRoute.of(ctx)!.settings.arguments as Match;
+            final repo = MatchRepositoryImpl(CognitoAuthDataSource());
+            return BlocProvider<VolleyballDetailBloc>(
+              create: (_) => VolleyballDetailBloc(
+                GetVolleyballDataUseCase(repo),
+              ),
+              child: VolleyballDetailScreen(match: match),
             );
           },
           '/live-mode': (ctx) {

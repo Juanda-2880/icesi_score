@@ -4,6 +4,8 @@ import '../../domain/entities/match.dart';
 import '../../domain/entities/match_period.dart';
 import '../../domain/entities/soccer_event.dart';
 import '../../domain/entities/team.dart';
+import '../../domain/entities/volleyball_event.dart';
+import '../../domain/entities/volleyball_set.dart';
 import '../../domain/exceptions/match_exception.dart';
 import '../../domain/repository/match_repository.dart';
 import '../source/match_api_data_source.dart';
@@ -152,6 +154,18 @@ class MatchRepositoryImpl implements MatchRepository {
       rethrow;
     } on Exception {
       throw const MatchException('Error al obtener período. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(String matchId) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.getVolleyballData(idToken, matchId);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al obtener datos del partido. Intenta de nuevo.');
     }
   }
 }
