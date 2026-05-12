@@ -1,5 +1,7 @@
 import '../../domain/entities/league.dart';
 import '../../domain/entities/match.dart';
+import '../../domain/entities/match_period.dart';
+import '../../domain/entities/soccer_event.dart';
 import '../../domain/entities/team.dart';
 
 abstract class MatchDataSource {
@@ -30,4 +32,6 @@ abstract class MatchDataSource {
     String? notes,
   });
   Future<void> deleteMatch({required String idToken, required String id});
+  Future<List<SoccerEvent>> getSoccerEvents(String idToken, String matchId);
+  Future<MatchPeriod?> getActivePeriod(String idToken, String matchId);
 }

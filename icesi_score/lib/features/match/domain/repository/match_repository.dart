@@ -1,5 +1,7 @@
 import '../entities/league.dart';
 import '../entities/match.dart';
+import '../entities/match_period.dart';
+import '../entities/soccer_event.dart';
 import '../entities/team.dart';
 
 abstract class MatchRepository {
@@ -28,4 +30,6 @@ abstract class MatchRepository {
     String? notes,
   });
   Future<void> deleteMatch(String id);
+  Future<List<SoccerEvent>> getSoccerEvents(String matchId);
+  Future<MatchPeriod?> getActivePeriod(String matchId);
 }

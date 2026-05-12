@@ -24,10 +24,13 @@ import 'features/match/domain/entities/match.dart';
 import 'features/match/domain/usecases/create_match_usecase.dart';
 import 'features/match/domain/usecases/delete_match_usecase.dart';
 import 'features/match/domain/usecases/get_leagues_usecase.dart';
+import 'features/match/domain/usecases/get_match_period_usecase.dart';
 import 'features/match/domain/usecases/get_matches_usecase.dart';
+import 'features/match/domain/usecases/get_soccer_events_usecase.dart';
 import 'features/match/domain/usecases/get_teams_usecase.dart';
 import 'features/match/domain/usecases/update_match_usecase.dart';
 import 'features/match/ui/bloc/create_match_bloc.dart';
+import 'features/match/ui/bloc/match_detail_bloc.dart';
 import 'features/match/ui/bloc/match_feed_bloc.dart';
 import 'features/match/ui/bloc/match_feed_event.dart';
 import 'features/match/ui/screens/create_match_screen.dart';
@@ -202,14 +205,21 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
                 child: const CreateAdminScreen(),
               ),
           '/match-detail': (ctx) {
-            final matchId =
-                ModalRoute.of(ctx)!.settings.arguments as String;
-            return MatchDetailScreen(matchId: matchId);
+            final match =
+                ModalRoute.of(ctx)!.settings.arguments as Match;
+            final repo = MatchRepositoryImpl(CognitoAuthDataSource());
+            return BlocProvider<MatchDetailBloc>(
+              create: (_) => MatchDetailBloc(
+                GetSoccerEventsUseCase(repo),
+                GetMatchPeriodUseCase(repo),
+              ),
+              child: MatchDetailScreen(match: match),
+            );
           },
           '/live-mode': (ctx) {
-            final matchId =
-                ModalRoute.of(ctx)!.settings.arguments as String;
-            return LiveModeScreen(matchId: matchId);
+            final match =
+                ModalRoute.of(ctx)!.settings.arguments as Match;
+            return LiveModeScreen(match: match);
           },
           '/profile': (ctx) {
             final userId = ctx.read<SessionCubit>().state!.id;

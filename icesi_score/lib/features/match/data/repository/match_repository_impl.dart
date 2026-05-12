@@ -1,6 +1,8 @@
 import '../../../auth/data/source/remote_auth_data_source.dart';
 import '../../domain/entities/league.dart';
 import '../../domain/entities/match.dart';
+import '../../domain/entities/match_period.dart';
+import '../../domain/entities/soccer_event.dart';
 import '../../domain/entities/team.dart';
 import '../../domain/exceptions/match_exception.dart';
 import '../../domain/repository/match_repository.dart';
@@ -126,6 +128,30 @@ class MatchRepositoryImpl implements MatchRepository {
       rethrow;
     } on Exception {
       throw const MatchException('Error al eliminar el partido. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<List<SoccerEvent>> getSoccerEvents(String matchId) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.getSoccerEvents(idToken, matchId);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al obtener eventos. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<MatchPeriod?> getActivePeriod(String matchId) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.getActivePeriod(idToken, matchId);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al obtener período. Intenta de nuevo.');
     }
   }
 }

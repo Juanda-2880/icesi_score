@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../domain/entities/match.dart';
 
 class LiveModeScreen extends StatelessWidget {
-  final String matchId;
+  final Match match;
 
-  const LiveModeScreen({super.key, required this.matchId});
+  const LiveModeScreen({super.key, required this.match});
 
   @override
   Widget build(BuildContext context) {

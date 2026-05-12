@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import '../../../../amplifyconfiguration.dart' show apiBaseUrl;
 import '../../domain/entities/league.dart';
 import '../../domain/entities/match.dart';
+import '../../domain/entities/match_period.dart';
+import '../../domain/entities/soccer_event.dart';
 import '../../domain/entities/team.dart';
 import '../../domain/exceptions/match_exception.dart';
 import 'match_data_source.dart';
@@ -202,5 +204,54 @@ class MatchApiDataSource implements MatchDataSource {
     }
 
     throw const MatchException('Error al eliminar el partido. Intenta de nuevo.');
+  }
+
+  @override
+  Future<List<SoccerEvent>> getSoccerEvents(String idToken, String matchId) async {
+    final response = await _client.get(
+      Uri.parse('$_kApiBase/matches/$matchId/soccer-events'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+
+    if (response.statusCode == 200) {
+      final list = jsonDecode(response.body) as List<dynamic>;
+      return list
+          .map((e) => SoccerEvent(
+                id: e['id'] as String,
+                matchId: matchId,
+                eventType: e['eventType'] as String,
+                minute: e['minute'] as int,
+                playerName: e['playerName'] as String?,
+                teamId: e['teamId'] as String?,
+                teamName: e['teamName'] as String?,
+                scoreAtMoment: e['scoreAtMoment'] as String?,
+                parentEventId: e['parentEventId'] as String?,
+                secondaryPlayerName: e['secondaryPlayerName'] as String?,
+              ))
+          .toList();
+    }
+
+    throw MatchException('Error al obtener eventos (${response.statusCode}).');
+  }
+
+  @override
+  Future<MatchPeriod?> getActivePeriod(String idToken, String matchId) async {
+    final response = await _client.get(
+      Uri.parse('$_kApiBase/matches/$matchId/periods'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return MatchPeriod(
+        id: data['id'] as String,
+        periodLabel: data['periodLabel'] as String,
+        startTime: DateTime.parse('${data['startTime'] as String}Z').toLocal(),
+      );
+    }
+
+    if (response.statusCode == 404) return null;
+
+    throw MatchException('Error al obtener período (${response.statusCode}).');
   }
 }

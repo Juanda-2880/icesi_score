@@ -162,8 +162,8 @@ class _AdminBodyState extends State<_AdminBody> {
     context.read<VolleyballFeedBloc>().add(const MatchFeedStartedEvent());
   }
 
-  void _onMatchTap(String matchId) {
-    Navigator.pushNamed(context, '/live-mode', arguments: matchId);
+  void _onMatchTap(Match match) {
+    Navigator.pushNamed(context, '/live-mode', arguments: match);
   }
 
   void _onEditTap(Match match) async {

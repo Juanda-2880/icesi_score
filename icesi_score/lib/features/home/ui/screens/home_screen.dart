@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../auth/domain/entities/auth_user.dart';
+import '../../../match/domain/entities/match.dart';
 import '../../../match/ui/bloc/match_feed_bloc.dart';
 import '../../../match/ui/bloc/match_feed_event.dart';
 import '../../../match/ui/bloc/match_feed_state.dart';
@@ -21,10 +22,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedSport = 0;
 
-  void _onMatchTap(BuildContext context, String matchId) {
+  void _onMatchTap(BuildContext context, Match match) {
     final role = context.read<SessionCubit>().state?.role ?? '';
     final route = role == 'ADMIN' ? '/live-mode' : '/match-detail';
-    Navigator.pushNamed(context, route, arguments: matchId);
+    Navigator.pushNamed(context, route, arguments: match);
   }
 
   Future<void> _refresh<B extends MatchFeedBloc>(BuildContext ctx) async {
@@ -58,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (state is MatchFeedLoadedState) {
           return MatchFeedList(
             matches: state.matches,
-            onMatchTap: (id) => _onMatchTap(context, id),
+            onMatchTap: (m) => _onMatchTap(context, m),
             onRefresh: () => _refresh<B>(ctx),
           );
         }

@@ -1,25 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../features/match/domain/entities/match.dart';
 import 'match_card.dart';
-
-const _kAvatarColors = [
-  Color(0xFF4343D8),
-  Color(0xFFFF8C42),
-  Color(0xFF6C63FF),
-  Color(0xFF2ECC71),
-  Color(0xFFE74C3C),
-  Color(0xFF3498DB),
-];
-
-Color _teamColor(String teamId) =>
-    _kAvatarColors[teamId.hashCode.abs() % _kAvatarColors.length];
-
-String _teamInitials(String name) =>
-    name.substring(0, name.length.clamp(0, 2)).toUpperCase();
+import 'team_helpers.dart';
 
 class MatchFeedList extends StatelessWidget {
   final List<Match> matches;
-  final Function(String matchId) onMatchTap;
+  final Function(Match match) onMatchTap;
   final Future<void> Function()? onRefresh;
   final bool isAdmin;
   final void Function(Match)? onEditTap;
@@ -59,7 +45,7 @@ class MatchFeedList extends StatelessWidget {
             separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (_, i) => _MatchListItem(
               match: matches[i],
-              onTap: () => onMatchTap(matches[i].id),
+              onTap: () => onMatchTap(matches[i]),
               isAdmin: isAdmin,
               onEditTap: onEditTap != null ? () => onEditTap!(matches[i]) : null,
               onDeleteTap:
@@ -171,11 +157,11 @@ class _MatchListItemState extends State<_MatchListItem>
         MatchCard(
           tournamentName: widget.match.leagueName,
           localTeamName: widget.match.homeTeamName,
-          localTeamInitials: _teamInitials(widget.match.homeTeamName),
-          localTeamColor: _teamColor(widget.match.homeTeamId),
+          localTeamInitials: teamInitials(widget.match.homeTeamName),
+          localTeamColor: teamColor(widget.match.homeTeamId),
           awayTeamName: widget.match.awayTeamName,
-          awayTeamInitials: _teamInitials(widget.match.awayTeamName),
-          awayTeamColor: _teamColor(widget.match.awayTeamId),
+          awayTeamInitials: teamInitials(widget.match.awayTeamName),
+          awayTeamColor: teamColor(widget.match.awayTeamId),
           status: widget.match.status,
           time: widget.match.matchTime,
           score: _score,

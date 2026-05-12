@@ -233,6 +233,58 @@ resource "aws_lambda_permission" "api_gw_delete_match" {
 }
 
 # ---------------------------------------------------------------------------
+# GET /matches/{id}/soccer-events — devuelve los eventos de un partido (cualquier usuario autenticado)
+# ---------------------------------------------------------------------------
+resource "aws_apigatewayv2_integration" "get_soccer_events_integration" {
+  api_id                 = aws_apigatewayv2_api.icesi_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.get_soccer_events.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "get_soccer_events_route" {
+  api_id             = aws_apigatewayv2_api.icesi_api.id
+  route_key          = "GET /matches/{id}/soccer-events"
+  target             = "integrations/${aws_apigatewayv2_integration.get_soccer_events_integration.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
+}
+
+resource "aws_lambda_permission" "api_gw_get_soccer_events" {
+  statement_id  = "AllowAPIGatewayInvokeGetSoccerEvents"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_soccer_events.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.icesi_api.execution_arn}/*/*"
+}
+
+# ---------------------------------------------------------------------------
+# GET /matches/{id}/periods — devuelve el período activo del partido (cualquier usuario autenticado)
+# ---------------------------------------------------------------------------
+resource "aws_apigatewayv2_integration" "get_match_periods_integration" {
+  api_id                 = aws_apigatewayv2_api.icesi_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.get_match_periods.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "get_match_periods_route" {
+  api_id             = aws_apigatewayv2_api.icesi_api.id
+  route_key          = "GET /matches/{id}/periods"
+  target             = "integrations/${aws_apigatewayv2_integration.get_match_periods_integration.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
+}
+
+resource "aws_lambda_permission" "api_gw_get_match_periods" {
+  statement_id  = "AllowAPIGatewayInvokeGetMatchPeriods"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_match_periods.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.icesi_api.execution_arn}/*/*"
+}
+
+# ---------------------------------------------------------------------------
 # GET /matches — devuelve los partidos filtrados por sport (cualquier usuario autenticado)
 # ---------------------------------------------------------------------------
 resource "aws_apigatewayv2_integration" "get_matches_integration" {
