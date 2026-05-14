@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color bgColor = Color(0xFF1A1A1A); // Gris oscuro casi negro
-  static const Color primaryColor = Color(0xFF4343D8); // Azul principal
-  static const Color surfaceColor = Color(
-    0xFF2C2C2C,
-  ); // Gris para tarjetas/inputs
+  static const Color bgColor = Color(0xFF1A1A1A);
+  static const Color primaryColor = Color(0xFF5454E9);
+  static const Color surfaceColor = Color(0xFF2C2C2C);
   static const Color textColor = Colors.white;
   static const Color subtitleColor = Colors.grey;
+
+  static const Color appBlue = Color(0xFF5454E9);
+  static const Color appYellow = Color(0xFFF1A25D);
+  static const Color appYellowDark = Color(0xFFE09758);
+  static const Color teamColorA = Color(0xFF5454E9);
+  static const Color teamColorB = Color(0xFFEB5757);
+  static const Color cardSurface = Color(0xFF2C2C2E);
+  static const Color cardInner = Color(0xFF1E1E1E);
 
   static ThemeData get darkTheme {
     return ThemeData(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:icesi_score/theme/app_theme.dart';
 import 'package:icesi_score/widgets/common/live_badge.dart';
 import 'package:icesi_score/widgets/common/team_avatar.dart';
 
@@ -116,7 +117,7 @@ class MatchCard extends StatelessWidget {
             Text(
               score ?? '0 - 0',
               style: const TextStyle(
-                color: Color(0xFFF5A623),
+                color: AppTheme.appYellow,
                 fontSize: 20.0,
                 fontWeight: FontWeight.bold,
               ),
@@ -127,7 +128,7 @@ class MatchCard extends StatelessWidget {
         return Text(
           score ?? '0 - 0',
           style: const TextStyle(
-            color: Colors.white,
+            color: AppTheme.appYellow,
             fontSize: 20.0,
             fontWeight: FontWeight.bold,
           ),

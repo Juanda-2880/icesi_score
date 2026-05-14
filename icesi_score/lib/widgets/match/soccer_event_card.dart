@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../features/match/domain/entities/soccer_event.dart';
+import '../../theme/app_theme.dart';
 
 class SoccerEventCard extends StatelessWidget {
   final SoccerEvent event;
@@ -58,7 +59,7 @@ class SoccerEventCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF2A2B2E),
+          color: AppTheme.cardInner,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -73,7 +74,7 @@ class SoccerEventCard extends StatelessWidget {
                     child: Text(
                       "${event.minute}'",
                       style: const TextStyle(
-                        color: Color(0xFFF5A623),
+                        color: AppTheme.appYellow,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),

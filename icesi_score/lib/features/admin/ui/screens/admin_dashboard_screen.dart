@@ -11,10 +11,9 @@ import '../../../profile/ui/bloc/logout_bloc.dart';
 import '../../../profile/ui/bloc/logout_event.dart';
 import '../../../profile/ui/bloc/logout_state.dart';
 import '../../../session/session_cubit.dart';
+import '../../../../theme/app_theme.dart';
 import '../../../../widgets/match/match_feed_list.dart';
 import '../../../../widgets/match/sport_selector.dart';
-
-const _purple = Color(0xFF6C63FF);
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -105,7 +104,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   footballBloc.add(const MatchFeedStartedEvent());
                   volleyballBloc.add(const MatchFeedStartedEvent());
                 },
-                backgroundColor: _purple,
+                backgroundColor: AppTheme.appBlue,
                 tooltip: 'Nuevo partido',
                 child: const Icon(Icons.add),
               ),
@@ -123,7 +122,7 @@ class _SuperAdminBody extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.admin_panel_settings, size: 64, color: _purple),
+            const Icon(Icons.admin_panel_settings, size: 64, color: AppTheme.appBlue),
             const SizedBox(height: 16),
             const Text(
               'Gestión de Administradores',
@@ -134,7 +133,7 @@ class _SuperAdminBody extends StatelessWidget {
               icon: const Icon(Icons.person_add),
               label: const Text('Nuevo Administrador'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _purple,
+                backgroundColor: AppTheme.appBlue,
                 minimumSize: const Size(double.infinity, 0),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),

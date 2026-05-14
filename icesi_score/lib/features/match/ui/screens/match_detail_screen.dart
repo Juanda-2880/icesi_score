@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/live_badge.dart';
 import '../../../../widgets/common/team_avatar.dart';
 import '../../../../widgets/match/soccer_event_card.dart';
@@ -241,7 +242,7 @@ class _ScoreHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _TeamColumn(
-                        teamId: match.homeTeamId,
+                        isHome: true,
                         teamName: match.homeTeamName,
                         align: CrossAxisAlignment.start,
                       ),
@@ -249,7 +250,7 @@ class _ScoreHeader extends StatelessWidget {
                           child: _CenterDisplay(
                               match: match, clockLabel: clockLabel)),
                       _TeamColumn(
-                        teamId: match.awayTeamId,
+                        isHome: false,
                         teamName: match.awayTeamName,
                         align: CrossAxisAlignment.end,
                       ),
@@ -275,12 +276,12 @@ class _ScoreHeader extends StatelessWidget {
 }
 
 class _TeamColumn extends StatelessWidget {
-  final String teamId;
+  final bool isHome;
   final String teamName;
   final CrossAxisAlignment align;
 
   const _TeamColumn({
-    required this.teamId,
+    required this.isHome,
     required this.teamName,
     required this.align,
   });
@@ -293,7 +294,7 @@ class _TeamColumn extends StatelessWidget {
         children: [
           TeamAvatar(
             initials: teamInitials(teamName),
-            backgroundColor: teamColor(teamId),
+            backgroundColor: teamColor(isHome),
             radius: 28,
           ),
           const SizedBox(height: 8),
@@ -332,7 +333,7 @@ class _CenterDisplay extends StatelessWidget {
             Text(
               '${match.homeScore ?? 0} - ${match.awayScore ?? 0}',
               style: const TextStyle(
-                color: Color(0xFFF5A623),
+                color: AppTheme.appYellow,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
               ),
@@ -413,7 +414,7 @@ class _EventsSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.grey.shade800,
+          color: AppTheme.cardSurface,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(16),

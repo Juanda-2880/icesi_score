@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../features/match/domain/entities/volleyball_event.dart';
+import '../../theme/app_theme.dart';
 
 class VolleyballEventCard extends StatelessWidget {
   final VolleyballEvent event;
@@ -58,7 +59,7 @@ class VolleyballEventCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF2A2B2E),
+          color: AppTheme.cardInner,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(

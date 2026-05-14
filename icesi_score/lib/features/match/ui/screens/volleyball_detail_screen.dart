@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/team_avatar.dart';
 import '../../../../widgets/match/team_helpers.dart';
 import '../../../../widgets/match/volleyball_event_card.dart';
@@ -198,13 +199,13 @@ class _ScoreHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _TeamColumn(
-                        teamId: match.homeTeamId,
+                        isHome: true,
                         teamName: match.homeTeamName,
                         align: CrossAxisAlignment.start,
                       ),
                       Expanded(child: _CenterDisplay(match: match)),
                       _TeamColumn(
-                        teamId: match.awayTeamId,
+                        isHome: false,
                         teamName: match.awayTeamName,
                         align: CrossAxisAlignment.end,
                       ),
@@ -229,12 +230,12 @@ class _ScoreHeader extends StatelessWidget {
 }
 
 class _TeamColumn extends StatelessWidget {
-  final String teamId;
+  final bool isHome;
   final String teamName;
   final CrossAxisAlignment align;
 
   const _TeamColumn({
-    required this.teamId,
+    required this.isHome,
     required this.teamName,
     required this.align,
   });
@@ -247,7 +248,7 @@ class _TeamColumn extends StatelessWidget {
         children: [
           TeamAvatar(
             initials: teamInitials(teamName),
-            backgroundColor: teamColor(teamId),
+            backgroundColor: teamColor(isHome),
             radius: 28,
           ),
           const SizedBox(height: 8),
@@ -283,7 +284,7 @@ class _CenterDisplay extends StatelessWidget {
             Text(
               '${match.homeScore ?? 0} - ${match.awayScore ?? 0}',
               style: const TextStyle(
-                color: Color(0xFFF5A623),
+                color: AppTheme.appYellow,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
               ),
@@ -357,7 +358,7 @@ class _CurrentSetBlock extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF2A2B2E),
+          color: AppTheme.cardSurface,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
@@ -366,7 +367,7 @@ class _CurrentSetBlock extends StatelessWidget {
             Text(
               '${active.homeScore} - ${active.awayScore}',
               style: const TextStyle(
-                color: Color(0xFFF5A623),
+                color: AppTheme.appYellow,
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
               ),
@@ -399,7 +400,7 @@ class _SetScoresCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.grey.shade800,
+          color: AppTheme.cardSurface,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(16),
@@ -429,11 +430,7 @@ class _SetScoresCard extends StatelessWidget {
                 style: TextStyle(color: Colors.white54, fontSize: 14),
               )
             else
-              ...sets.map((s) => _SetRow(
-                    set: s,
-                    homeTeamId: match.homeTeamId,
-                    awayTeamId: match.awayTeamId,
-                  )),
+              ...sets.map((s) => _SetRow(set: s)),
           ],
         ),
       ),
@@ -443,32 +440,26 @@ class _SetScoresCard extends StatelessWidget {
 
 class _SetRow extends StatelessWidget {
   final VolleyballSet set;
-  final String homeTeamId;
-  final String awayTeamId;
 
-  const _SetRow({
-    required this.set,
-    required this.homeTeamId,
-    required this.awayTeamId,
-  });
+  const _SetRow({required this.set});
 
   @override
   Widget build(BuildContext context) {
     final isLive = set.isActive;
-    final homeColor = isLive ? const Color(0xFFF5A623) : teamColor(homeTeamId);
-    final awayColor = isLive ? const Color(0xFFF5A623) : teamColor(awayTeamId);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: isLive
           ? BoxDecoration(
-              border: Border.all(color: const Color(0xFFF5A623), width: 1),
-              borderRadius: BorderRadius.circular(10),
+              color: const Color(0xFF403832),
+              border: Border.all(color: AppTheme.appYellow, width: 1.5),
+              borderRadius: BorderRadius.circular(12),
             )
-          : null,
-      padding: isLive
-          ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
-          : const EdgeInsets.symmetric(vertical: 4),
+          : BoxDecoration(
+              color: AppTheme.cardInner,
+              borderRadius: BorderRadius.circular(12),
+            ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
           Text(
@@ -480,7 +471,7 @@ class _SetRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5A623),
+                color: AppTheme.appYellow,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(
@@ -497,7 +488,7 @@ class _SetRow extends StatelessWidget {
           Text(
             '${set.homeScore}',
             style: TextStyle(
-              color: homeColor,
+              color: isLive ? AppTheme.appYellowDark : AppTheme.teamColorA,
               fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
@@ -509,7 +500,7 @@ class _SetRow extends StatelessWidget {
           Text(
             '${set.awayScore}',
             style: TextStyle(
-              color: awayColor,
+              color: isLive ? AppTheme.appYellowDark : AppTheme.teamColorB,
               fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
@@ -541,7 +532,7 @@ class _EventsSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.grey.shade800,
+          color: AppTheme.cardSurface,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(16),

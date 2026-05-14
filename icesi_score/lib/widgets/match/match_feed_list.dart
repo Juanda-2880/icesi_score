@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../features/match/domain/entities/match.dart';
+import '../../theme/app_theme.dart';
 import 'match_card.dart';
 import 'team_helpers.dart';
 
@@ -158,10 +159,10 @@ class _MatchListItemState extends State<_MatchListItem>
           tournamentName: widget.match.leagueName,
           localTeamName: widget.match.homeTeamName,
           localTeamInitials: teamInitials(widget.match.homeTeamName),
-          localTeamColor: teamColor(widget.match.homeTeamId),
+          localTeamColor: teamColor(true),
           awayTeamName: widget.match.awayTeamName,
           awayTeamInitials: teamInitials(widget.match.awayTeamName),
-          awayTeamColor: teamColor(widget.match.awayTeamId),
+          awayTeamColor: teamColor(false),
           status: widget.match.status,
           time: widget.match.matchTime,
           score: _score,
@@ -182,7 +183,7 @@ class _MatchListItemState extends State<_MatchListItem>
       children: [
         _ActionButton(
           label: 'Editar',
-          color: const Color(0xFF6C63FF),
+          color: AppTheme.appBlue,
           enabled: isScheduled,
           onTap: isScheduled
               ? () {

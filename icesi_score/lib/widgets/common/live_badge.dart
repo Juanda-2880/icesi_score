@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
 
 class LiveBadge extends StatelessWidget{
-  
+
   const LiveBadge({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5A623),
+        color: AppTheme.appYellow,
         borderRadius: BorderRadius.circular(4.0),
       ),
       child: const Text(
