@@ -1,4 +1,5 @@
 import '../entities/league.dart';
+import '../entities/lineup_player.dart';
 import '../entities/match.dart';
 import '../entities/match_period.dart';
 import '../entities/soccer_event.dart';
@@ -35,4 +36,15 @@ abstract class MatchRepository {
   Future<List<SoccerEvent>> getSoccerEvents(String matchId);
   Future<MatchPeriod?> getActivePeriod(String matchId);
   Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(String matchId);
+  Future<List<LineupPlayer>> getMatchLineup(String matchId);
+  Future<({SoccerEvent event, int homeScore, int awayScore})> postSoccerEvent({
+    required String matchId,
+    required String eventType,
+    required String mainPlayerId,
+    required int eventMinute,
+    String? secondaryPlayerId,
+    String? parentEventId,
+    String? assistPlayerId,
+    String? note,
+  });
 }

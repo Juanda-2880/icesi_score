@@ -1,4 +1,5 @@
 import '../../domain/entities/league.dart';
+import '../../domain/entities/lineup_player.dart';
 import '../../domain/entities/match.dart';
 import '../../domain/entities/match_period.dart';
 import '../../domain/entities/soccer_event.dart';
@@ -37,4 +38,16 @@ abstract class MatchDataSource {
   Future<List<SoccerEvent>> getSoccerEvents(String idToken, String matchId);
   Future<MatchPeriod?> getActivePeriod(String idToken, String matchId);
   Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(String idToken, String matchId);
+  Future<List<LineupPlayer>> getMatchLineup(String idToken, String matchId);
+  Future<({SoccerEvent event, int homeScore, int awayScore})> postSoccerEvent({
+    required String idToken,
+    required String matchId,
+    required String eventType,
+    required String mainPlayerId,
+    required int eventMinute,
+    String? secondaryPlayerId,
+    String? parentEventId,
+    String? assistPlayerId,
+    String? note,
+  });
 }

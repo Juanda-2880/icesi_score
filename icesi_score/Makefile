@@ -1,4 +1,4 @@
-.PHONY: db-up db-migrate db-seed db-connect db-down venv superadmin-seed lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build
+.PHONY: db-up db-migrate db-seed db-connect db-down venv superadmin-seed lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -243,9 +243,48 @@ get-volleyball-data-build: venv
 	 echo "✓ Paquete Lambda listo en $$PKG"
 
 # ---------------------------------------------------------------------------
+# get-match-lineup-build — empaqueta get_match_lineup con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+get-match-lineup-build: venv
+	@PKG="backend/get_match_lineup/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/get_match_lineup/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
+# post-soccer-event-build — empaqueta post_soccer_event con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+post-soccer-event-build: venv
+	@PKG="backend/post_soccer_event/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/post_soccer_event/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
+# ws-broadcaster-build — empaqueta ws_broadcaster (sin psycopg2)
+# ---------------------------------------------------------------------------
+ws-broadcaster-build: venv
+	@PKG="backend/ws_broadcaster/package" && \
+	 rm -rf "$$PKG" && mkdir -p "$$PKG" && \
+	 cp backend/ws_broadcaster/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
 # db-up — abre acceso público temporal desde la IP del desarrollador
 # ---------------------------------------------------------------------------
-db-up: lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build
+db-up: lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build
 	@echo "Obteniendo IP pública…"
 	@MY_IP=$$(curl -s https://ifconfig.me) && \
 	 echo "IP detectada: $$MY_IP" && \
@@ -253,6 +292,16 @@ db-up: lambda-build profile-build update-profile-build delete-user-build create-
 	 terraform apply \
 	   -var="dev_my_ip=$$MY_IP" \
 	   -var="db_password=$(DB_PASSWORD)"
+	@API_URL=$$(cd infrastructure && terraform output -raw api_endpoint) && \
+	 sed -i "s|^const apiBaseUrl = .*|const apiBaseUrl = '$$API_URL';|" \
+	   lib/amplifyconfiguration.dart
+	@WS_URL=$$(cd infrastructure && terraform output -raw ws_endpoint) && \
+	 ( grep -q 'wsBaseUrl' lib/amplifyconfiguration.dart && \
+	   sed -i "s|^const wsBaseUrl = .*|const wsBaseUrl = '$$WS_URL';|" \
+	     lib/amplifyconfiguration.dart || \
+	   sed -i "/^const apiBaseUrl/a const wsBaseUrl = '$$WS_URL';" \
+	     lib/amplifyconfiguration.dart ) && \
+	 sed -i '/wsBaseUrl/s/\$$default/\\$$default/g' lib/amplifyconfiguration.dart
 
 # ---------------------------------------------------------------------------
 # db-migrate — aplica schema.sql y crea el SUPERADMIN

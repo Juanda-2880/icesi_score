@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../../amplifyconfiguration.dart' show apiBaseUrl;
 import '../../domain/entities/league.dart';
+import '../../domain/entities/lineup_player.dart';
 import '../../domain/entities/match.dart';
 import '../../domain/entities/match_period.dart';
 import '../../domain/entities/soccer_event.dart';
@@ -298,5 +299,88 @@ class MatchApiDataSource implements MatchDataSource {
     }
 
     throw MatchException('Error al obtener datos del partido (${response.statusCode}).');
+  }
+
+  @override
+  Future<List<LineupPlayer>> getMatchLineup(String idToken, String matchId) async {
+    final response = await _client.get(
+      Uri.parse('$_kApiBase/matches/$matchId/lineup'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+    if (response.statusCode == 200) {
+      final list = jsonDecode(response.body) as List<dynamic>;
+      return list
+          .map((e) => LineupPlayer(
+                id: e['id'] as String,
+                playerId: e['playerId'] as String,
+                playerName: e['playerName'] as String,
+                jerseyNumber: e['jerseyNumber'] as int,
+                teamId: e['teamId'] as String,
+                teamName: e['teamName'] as String,
+                status: e['status'] as String,
+                positionCoordinate: e['positionCoordinate'] as String?,
+              ))
+          .toList();
+    }
+    throw MatchException('Error al obtener alineación (${response.statusCode}).');
+  }
+
+  @override
+  Future<({SoccerEvent event, int homeScore, int awayScore})> postSoccerEvent({
+    required String idToken,
+    required String matchId,
+    required String eventType,
+    required String mainPlayerId,
+    required int eventMinute,
+    String? secondaryPlayerId,
+    String? parentEventId,
+    String? assistPlayerId,
+    String? note,
+  }) async {
+    final body = <String, dynamic>{
+      'eventType': eventType,
+      'mainPlayerId': mainPlayerId,
+      'eventMinute': eventMinute,
+    };
+    if (secondaryPlayerId != null) body['secondaryPlayerId'] = secondaryPlayerId;
+    if (parentEventId != null) body['parentEventId'] = parentEventId;
+    if (assistPlayerId != null) body['assistPlayerId'] = assistPlayerId;
+    if (note != null && note.isNotEmpty) body['note'] = note;
+    final response = await _client.post(
+      Uri.parse('$_kApiBase/matches/$matchId/soccer-events'),
+      headers: {
+        'Authorization': 'Bearer $idToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final e = data['event'] as Map<String, dynamic>;
+      final s = data['newScore'] as Map<String, dynamic>;
+      return (
+        event: SoccerEvent(
+          id: e['id'] as String,
+          matchId: matchId,
+          eventType: e['eventType'] as String,
+          minute: e['minute'] as int,
+          playerName: e['playerName'] as String?,
+          teamId: e['teamId'] as String?,
+          scoreAtMoment: e['scoreAtMoment'] as String?,
+          parentEventId: e['parentEventId'] as String?,
+          note: e['note'] as String?,
+        ),
+        homeScore: s['homeScore'] as int,
+        awayScore: s['awayScore'] as int,
+      );
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para registrar eventos.');
+    }
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'El partido no está en progreso.');
+    }
+    throw MatchException('Error al registrar evento (${response.statusCode}).');
   }
 }

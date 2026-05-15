@@ -20,6 +20,17 @@ class MatchDetailLoadedState extends MatchDetailState {
     required this.events,
     this.activePeriod,
   });
+
+  MatchDetailLoadedState copyWith({
+    Match? match,
+    List<SoccerEvent>? events,
+    MatchPeriod? activePeriod,
+  }) =>
+      MatchDetailLoadedState(
+        match: match ?? this.match,
+        events: events ?? this.events,
+        activePeriod: activePeriod ?? this.activePeriod,
+      );
 }
 
 class MatchDetailErrorState extends MatchDetailState {

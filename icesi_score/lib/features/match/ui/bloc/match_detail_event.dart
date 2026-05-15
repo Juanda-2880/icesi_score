@@ -14,8 +14,14 @@ class MatchDetailRefreshRequestedEvent extends MatchDetailEvent {
   const MatchDetailRefreshRequestedEvent();
 }
 
-// Hook for US-11 WebSocket broadcast — handler is wired but unused until then.
+// Dispatched by MatchDetailScreen when a WebSocket SOCCER_EVENT message arrives.
 class MatchEventReceivedEvent extends MatchDetailEvent {
   final SoccerEvent event;
-  const MatchEventReceivedEvent(this.event);
+  final int? newHomeScore;
+  final int? newAwayScore;
+  const MatchEventReceivedEvent(
+    this.event, {
+    this.newHomeScore,
+    this.newAwayScore,
+  });
 }

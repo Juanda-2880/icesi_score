@@ -1,5 +1,6 @@
 import '../../../auth/data/source/remote_auth_data_source.dart';
 import '../../domain/entities/league.dart';
+import '../../domain/entities/lineup_player.dart';
 import '../../domain/entities/match.dart';
 import '../../domain/entities/match_period.dart';
 import '../../domain/entities/soccer_event.dart';
@@ -166,6 +167,49 @@ class MatchRepositoryImpl implements MatchRepository {
       rethrow;
     } on Exception {
       throw const MatchException('Error al obtener datos del partido. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<List<LineupPlayer>> getMatchLineup(String matchId) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.getMatchLineup(idToken, matchId);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al obtener la alineación. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<({SoccerEvent event, int homeScore, int awayScore})> postSoccerEvent({
+    required String matchId,
+    required String eventType,
+    required String mainPlayerId,
+    required int eventMinute,
+    String? secondaryPlayerId,
+    String? parentEventId,
+    String? assistPlayerId,
+    String? note,
+  }) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.postSoccerEvent(
+        idToken: idToken,
+        matchId: matchId,
+        eventType: eventType,
+        mainPlayerId: mainPlayerId,
+        eventMinute: eventMinute,
+        secondaryPlayerId: secondaryPlayerId,
+        parentEventId: parentEventId,
+        assistPlayerId: assistPlayerId,
+        note: note,
+      );
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al registrar el evento. Intenta de nuevo.');
     }
   }
 }

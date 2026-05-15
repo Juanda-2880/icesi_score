@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
+import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../../../amplifyconfiguration.dart' show wsBaseUrl;
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/live_badge.dart';
 import '../../../../widgets/common/team_avatar.dart';
@@ -28,11 +33,44 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   Timer? _clockTimer;
   Duration _elapsed = Duration.zero;
   final Set<String> _expandedIds = {};
+  WebSocketChannel? _channel;
 
   @override
   void initState() {
     super.initState();
     context.read<MatchDetailBloc>().add(MatchDetailStartedEvent(widget.match));
+    if (widget.match.status == 'IN_PROGRESS') (() async => await _connectWs())();
+  }
+
+  Future<void> _connectWs() async {
+    try {
+      final session =
+          await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
+      final idToken = session.userPoolTokensResult.value.idToken.raw;
+      final wsUrl = '$wsBaseUrl?token=$idToken&match_id=${widget.match.id}';
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      _channel!.stream.listen(
+        (raw) {
+          if (!mounted) return;
+          try {
+            final msg = jsonDecode(raw as String) as Map<String, dynamic>;
+            if (msg['type'] != 'SOCCER_EVENT') return;
+            final event = msg['event'] as Map<String, dynamic>?;
+            final score = msg['newScore'] as Map<String, dynamic>?;
+            if (event == null) return;
+            final newHomeScore = (score?['homeScore'] as num?)?.toInt();
+            final newAwayScore = (score?['awayScore'] as num?)?.toInt();
+            context.read<MatchDetailBloc>().add(MatchEventReceivedEvent(
+                  _parseSoccerEvent(event, widget.match.id),
+                  newHomeScore: newHomeScore,
+                  newAwayScore: newAwayScore,
+                ));
+          } catch (_) {}
+        },
+        onError: (_) {},
+        cancelOnError: false,
+      );
+    } catch (_) {}
   }
 
   void _startClock(MatchPeriod period) {
@@ -54,6 +92,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   @override
   void dispose() {
     _stopClock();
+    _channel?.sink.close();
     super.dispose();
   }
 
@@ -71,6 +110,21 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         _expandedIds.add(id);
       }
     });
+  }
+
+  SoccerEvent _parseSoccerEvent(Map<String, dynamic> e, String matchId) {
+    return SoccerEvent(
+      id: e['id'] as String,
+      matchId: matchId,
+      eventType: e['eventType'] as String,
+      minute: (e['minute'] as num).toInt(),
+      playerName: e['playerName'] as String?,
+      teamId: e['teamId'] as String?,
+      teamName: e['teamName'] as String?,
+      scoreAtMoment: e['scoreAtMoment'] as String?,
+      parentEventId: e['parentEventId'] as String?,
+      note: e['note'] as String?,
+    );
   }
 
   Future<void> _onRefresh() async {

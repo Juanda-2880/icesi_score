@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../../../amplifyconfiguration.dart' show wsBaseUrl;
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/team_avatar.dart';
 import '../../../../widgets/match/team_helpers.dart';
@@ -23,6 +27,7 @@ class VolleyballDetailScreen extends StatefulWidget {
 
 class _VolleyballDetailScreenState extends State<VolleyballDetailScreen> {
   final Set<String> _expandedIds = {};
+  WebSocketChannel? _channel;
 
   @override
   void initState() {
@@ -30,6 +35,28 @@ class _VolleyballDetailScreenState extends State<VolleyballDetailScreen> {
     context
         .read<VolleyballDetailBloc>()
         .add(VolleyballDetailStartedEvent(widget.match));
+    if (widget.match.status == 'IN_PROGRESS') _connectWs();
+  }
+
+  void _connectWs() {
+    try {
+      _channel = WebSocketChannel.connect(
+        Uri.parse('$wsBaseUrl?match_id=${widget.match.id}'),
+      );
+      _channel!.stream.listen(
+        (raw) {
+          if (!mounted) return;
+          final msg = jsonDecode(raw as String) as Map<String, dynamic>;
+          if (msg['type'] == 'VOLLEYBALL_EVENT') {
+            context
+                .read<VolleyballDetailBloc>()
+                .add(const VolleyballDetailRefreshRequestedEvent());
+          }
+        },
+        onError: (_) {},
+        cancelOnError: false,
+      );
+    } catch (_) {}
   }
 
   void _toggleExpand(String id) {
@@ -50,6 +77,12 @@ class _VolleyballDetailScreenState extends State<VolleyballDetailScreen> {
         .read<VolleyballDetailBloc>()
         .stream
         .firstWhere((s) => s is! VolleyballDetailLoadingState);
+  }
+
+  @override
+  void dispose() {
+    _channel?.sink.close();
+    super.dispose();
   }
 
   @override

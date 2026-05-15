@@ -1,6 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/match.dart';
-import '../../domain/entities/soccer_event.dart';
 import '../../domain/exceptions/match_exception.dart';
 import '../../domain/usecases/get_match_period_usecase.dart';
 import '../../domain/usecases/get_soccer_events_usecase.dart';
@@ -61,11 +60,20 @@ class MatchDetailBloc extends Bloc<MatchDetailEvent, MatchDetailState> {
   ) {
     final current = state;
     if (current is! MatchDetailLoadedState) return;
-    final updated = <SoccerEvent>[event.event, ...current.events];
-    emit(MatchDetailLoadedState(
-      match: current.match,
-      events: updated,
-      activePeriod: current.activePeriod,
-    ));
+    if (event.newHomeScore != null || event.newAwayScore != null) {
+      final updatedMatch = current.match.copyWith(
+        homeScore: event.newHomeScore ?? current.match.homeScore,
+        awayScore: event.newAwayScore ?? current.match.awayScore,
+      );
+      _currentMatch = updatedMatch;
+      emit(current.copyWith(
+        events: [event.event, ...current.events],
+        match: updatedMatch,
+      ));
+    } else {
+      emit(current.copyWith(
+        events: [event.event, ...current.events],
+      ));
+    }
   }
 }

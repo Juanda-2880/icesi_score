@@ -9,6 +9,7 @@ class SoccerEvent {
   final String? scoreAtMoment;
   final String? parentEventId;
   final String? secondaryPlayerName;
+  final String? note;
 
   const SoccerEvent({
     required this.id,
@@ -21,5 +22,6 @@ class SoccerEvent {
     this.scoreAtMoment,
     this.parentEventId,
     this.secondaryPlayerName,
+    this.note,
   });
 }

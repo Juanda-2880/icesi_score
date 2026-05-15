@@ -90,7 +90,8 @@ CREATE TABLE soccer_event (
     main_player_id      UUID NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
     secondary_player_id UUID REFERENCES player(id) ON DELETE RESTRICT,
     event_minute        INT,
-    id_parent_event     UUID REFERENCES soccer_event(id) ON DELETE RESTRICT
+    id_parent_event     UUID REFERENCES soccer_event(id) ON DELETE RESTRICT,
+    note                TEXT
 );
 
 CREATE TABLE volleyball_set (
