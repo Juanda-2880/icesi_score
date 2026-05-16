@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
 import '../../features/match/domain/entities/lineup_player.dart';
+import '../../features/match/domain/entities/soccer_event.dart';
 import '../../theme/app_theme.dart';
 
 class FootballFieldWidget extends StatelessWidget {
   final List<LineupPlayer> lineup;
   final String homeTeamId;
+  final List<SoccerEvent> events;
   final void Function(LineupPlayer) onPlayerTap;
 
   const FootballFieldWidget({
     super.key,
     required this.lineup,
     required this.homeTeamId,
+    required this.events,
     required this.onPlayerTap,
   });
 
   static const List<Offset> _positions = [
     Offset(0.50, 0.88), // GK
-    Offset(0.80, 0.68), Offset(0.60, 0.68), Offset(0.40, 0.68), Offset(0.20, 0.68), // DEF
-    Offset(0.80, 0.48), Offset(0.60, 0.48), Offset(0.40, 0.48), Offset(0.20, 0.48), // MID
-    Offset(0.60, 0.25), Offset(0.40, 0.25), // FWD
+    Offset(0.80, 0.77), Offset(0.60, 0.77), Offset(0.40, 0.77), Offset(0.20, 0.77), // DEF
+    Offset(0.80, 0.66), Offset(0.60, 0.66), Offset(0.40, 0.66), Offset(0.20, 0.66), // MID
+    Offset(0.60, 0.55), Offset(0.40, 0.55), // FWD
   ];
 
   @override
@@ -26,16 +29,18 @@ class FootballFieldWidget extends StatelessWidget {
     final homePlayers = lineup
         .where((p) =>
             p.teamId == homeTeamId &&
-            (p.status == 'STARTER' || p.status == 'ON_FIELD'))
-        .toList()
-      ..sort((a, b) => a.jerseyNumber.compareTo(b.jerseyNumber));
+            (p.status == 'STARTER' ||
+                p.status == 'ON_FIELD' ||
+                p.status == 'EXPELLED'))
+        .toList();
 
     final awayPlayers = lineup
         .where((p) =>
             p.teamId != homeTeamId &&
-            (p.status == 'STARTER' || p.status == 'ON_FIELD'))
-        .toList()
-      ..sort((a, b) => a.jerseyNumber.compareTo(b.jerseyNumber));
+            (p.status == 'STARTER' ||
+                p.status == 'ON_FIELD' ||
+                p.status == 'EXPELLED'))
+        .toList();
 
     return LayoutBuilder(builder: (_, constraints) {
       final w = constraints.maxWidth;
@@ -61,22 +66,23 @@ class FootballFieldWidget extends StatelessWidget {
     required bool isHome,
   }) {
     const bubbleRadius = 20.0;
-    // Label is ~14 px tall + 2 px gap above/below the avatar.
-    // For away players the label renders above, so shift `top` up by that
-    // amount so the bubble centre stays at the intended pitch coordinate.
-    const labelOffset = 16.0;
     final result = <Widget>[];
     for (var i = 0; i < players.length && i < _positions.length; i++) {
       final pos = _positions[i];
       final dy = isHome ? pos.dy : 1.0 - pos.dy;
-      final topOffset =
-          isHome ? dy * h - bubbleRadius : dy * h - bubbleRadius - labelOffset;
+      final topOffset = dy * h - bubbleRadius;
+      final yellowCards = events
+          .where((e) =>
+              e.eventType == 'YELLOW_CARD' &&
+              e.mainPlayerId == players[i].playerId)
+          .length;
       result.add(Positioned(
         left: pos.dx * w - bubbleRadius,
         top: topOffset,
         child: _PlayerBubble(
           player: players[i],
           isHome: isHome,
+          yellowCardCount: yellowCards,
           onTap: () => onPlayerTap(players[i]),
         ),
       ));
@@ -88,11 +94,13 @@ class FootballFieldWidget extends StatelessWidget {
 class _PlayerBubble extends StatelessWidget {
   final LineupPlayer player;
   final bool isHome;
+  final int yellowCardCount;
   final VoidCallback onTap;
 
   const _PlayerBubble({
     required this.player,
     required this.isHome,
+    required this.yellowCardCount,
     required this.onTap,
   });
 
@@ -103,19 +111,58 @@ class _PlayerBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isHome ? AppTheme.teamColorA : AppTheme.teamColorB;
-    final avatar = CircleAvatar(
-      radius: 20,
-      backgroundColor: color,
-      child: Text(
-        '${player.jerseyNumber}',
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
+    final bool isEffectivelyExpelled =
+        player.status == 'EXPELLED' || yellowCardCount >= 2;
+    final bool hasOneYellow = yellowCardCount == 1 && !isEffectivelyExpelled;
+
+    final teamColor = isHome ? AppTheme.teamColorA : AppTheme.teamColorB;
+    final bubbleColor =
+        isEffectivelyExpelled ? Colors.grey.shade500 : teamColor;
+
+    final avatar = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: bubbleColor,
+          child: Text(
+            '${player.jerseyNumber}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
         ),
-      ),
+        if (isEffectivelyExpelled)
+          Positioned(
+            top: -4,
+            right: -4,
+            child: Container(
+              width: 10,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          )
+        else if (hasOneYellow)
+          Positioned(
+            top: -4,
+            right: -4,
+            child: Container(
+              width: 10,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.yellow,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+      ],
     );
+
     final label = Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
@@ -132,15 +179,16 @@ class _PlayerBubble extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
     );
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: isHome
-            ? [avatar, const SizedBox(height: 2), label]
-            : [label, const SizedBox(height: 2), avatar],
-      ),
+
+    final column = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [avatar, const SizedBox(height: 2), label],
     );
+
+    if (isEffectivelyExpelled) {
+      return IgnorePointer(child: column);
+    }
+    return GestureDetector(onTap: onTap, child: column);
   }
 }
 
@@ -156,7 +204,7 @@ class _FieldPainter extends CustomPainter {
     );
 
     final line = Paint()
-      ..color = Colors.white.withValues(alpha:0.65)
+      ..color = Colors.white.withValues(alpha: 0.65)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
@@ -181,7 +229,7 @@ class _FieldPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(w * 0.5, h * 0.5),
       3,
-      Paint()..color = Colors.white.withValues(alpha:0.65),
+      Paint()..color = Colors.white.withValues(alpha: 0.65),
     );
   }
 
@@ -194,6 +242,7 @@ class FootballBenchWidget extends StatelessWidget {
   final String homeTeamId;
   final String homeTeamName;
   final String awayTeamName;
+  final List<SoccerEvent> events;
   final void Function(LineupPlayer) onPlayerTap;
 
   const FootballBenchWidget({
@@ -202,6 +251,7 @@ class FootballBenchWidget extends StatelessWidget {
     required this.homeTeamId,
     required this.homeTeamName,
     required this.awayTeamName,
+    required this.events,
     required this.onPlayerTap,
   });
 
@@ -225,6 +275,7 @@ class FootballBenchWidget extends StatelessWidget {
             teamName: homeTeamName,
             players: homeBench,
             isHome: true,
+            events: events,
             onPlayerTap: onPlayerTap,
           ),
         ),
@@ -234,6 +285,7 @@ class FootballBenchWidget extends StatelessWidget {
             teamName: awayTeamName,
             players: awayBench,
             isHome: false,
+            events: events,
             onPlayerTap: onPlayerTap,
           ),
         ),
@@ -246,12 +298,14 @@ class _BenchColumn extends StatelessWidget {
   final String teamName;
   final List<LineupPlayer> players;
   final bool isHome;
+  final List<SoccerEvent> events;
   final void Function(LineupPlayer) onPlayerTap;
 
   const _BenchColumn({
     required this.teamName,
     required this.players,
     required this.isHome,
+    required this.events,
     required this.onPlayerTap,
   });
 
@@ -277,16 +331,29 @@ class _BenchColumn extends StatelessWidget {
             style: TextStyle(color: Colors.grey, fontSize: 11),
           )
         else
-          ...players.map((p) => InkWell(
-                onTap: () => onPlayerTap(p),
-                borderRadius: BorderRadius.circular(6),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
+          ...players.map((p) {
+            final yellowCards = events
+                .where((e) =>
+                    e.eventType == 'YELLOW_CARD' &&
+                    e.mainPlayerId == p.playerId)
+                .length;
+            final isEffectivelyExpelled =
+                p.status == 'EXPELLED' || yellowCards >= 2;
+            final hasOneYellow = yellowCards == 1 && !isEffectivelyExpelled;
+            final playerColor = isEffectivelyExpelled
+                ? Colors.grey.shade500
+                : color.withValues(alpha: 0.7);
+
+            final row = Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       CircleAvatar(
                         radius: 14,
-                        backgroundColor: color.withValues(alpha:0.7),
+                        backgroundColor: playerColor,
                         child: Text(
                           '${p.jerseyNumber}',
                           style: const TextStyle(
@@ -296,21 +363,60 @@ class _BenchColumn extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          p.playerName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
+                      if (isEffectivelyExpelled)
+                        Positioned(
+                          top: -3,
+                          right: -3,
+                          child: Container(
+                            width: 8,
+                            height: 11,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(1),
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
+                        )
+                      else if (hasOneYellow)
+                        Positioned(
+                          top: -3,
+                          right: -3,
+                          child: Container(
+                            width: 8,
+                            height: 11,
+                            decoration: BoxDecoration(
+                              color: Colors.yellow,
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
                         ),
-                      ),
                     ],
                   ),
-                ),
-              )),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      p.playerName,
+                      style: TextStyle(
+                        color: isEffectivelyExpelled
+                            ? Colors.grey
+                            : Colors.white,
+                        fontSize: 11,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            if (isEffectivelyExpelled) {
+              return IgnorePointer(child: row);
+            }
+            return InkWell(
+              onTap: () => onPlayerTap(p),
+              borderRadius: BorderRadius.circular(6),
+              child: row,
+            );
+          }),
       ],
     );
   }

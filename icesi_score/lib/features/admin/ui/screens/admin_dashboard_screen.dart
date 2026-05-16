@@ -162,8 +162,14 @@ class _AdminBodyState extends State<_AdminBody> {
   }
 
   void _onMatchTap(Match match) {
-    final route = match.sport == 'VOLLEYBALL' ? '/volleyball-detail' : '/live-mode';
-    Navigator.pushNamed(context, route, arguments: match);
+    final footballBloc = context.read<FootballFeedBloc>();
+    final volleyballBloc = context.read<VolleyballFeedBloc>();
+    final route =
+        match.sport == 'VOLLEYBALL' ? '/volleyball-detail' : '/live-mode';
+    Navigator.pushNamed(context, route, arguments: match).then((_) {
+      footballBloc.add(const MatchFeedStartedEvent());
+      volleyballBloc.add(const MatchFeedStartedEvent());
+    });
   }
 
   void _onEditTap(Match match) async {

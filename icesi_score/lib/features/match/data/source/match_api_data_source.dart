@@ -224,6 +224,7 @@ class MatchApiDataSource implements MatchDataSource {
                 matchId: matchId,
                 eventType: e['eventType'] as String,
                 minute: e['minute'] as int,
+                mainPlayerId: e['mainPlayerId'] as String?,
                 playerName: e['playerName'] as String?,
                 teamId: e['teamId'] as String?,
                 teamName: e['teamName'] as String?,

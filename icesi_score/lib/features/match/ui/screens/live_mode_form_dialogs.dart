@@ -383,30 +383,39 @@ class _CardEventDialogState extends State<CardEventDialog> {
 
 // ── Substitution ──────────────────────────────────────────────────────────────
 
+enum SubstitutionInitiator { field, bench }
+
 class SubstitutionEventDialog extends StatefulWidget {
-  final LineupPlayer playerOut;
-  final List<LineupPlayer> benchPlayers;
+  final SubstitutionInitiator initiator;
+  final LineupPlayer fixedPlayer;
+  final List<LineupPlayer> selectablePlayers;
   final MatchPeriod? activePeriod;
   final void Function({
     required int minute,
+    required String playerOutId,
     required String playerInId,
   }) onConfirm;
 
   const SubstitutionEventDialog({
     super.key,
-    required this.playerOut,
-    required this.benchPlayers,
+    required this.initiator,
+    required this.fixedPlayer,
+    required this.selectablePlayers,
     required this.activePeriod,
     required this.onConfirm,
   });
 
   static Future<void> show(
     BuildContext context, {
-    required LineupPlayer playerOut,
-    required List<LineupPlayer> benchPlayers,
+    required SubstitutionInitiator initiator,
+    required LineupPlayer fixedPlayer,
+    required List<LineupPlayer> selectablePlayers,
     required MatchPeriod? activePeriod,
-    required void Function({required int minute, required String playerInId})
-        onConfirm,
+    required void Function({
+      required int minute,
+      required String playerOutId,
+      required String playerInId,
+    }) onConfirm,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -416,8 +425,9 @@ class SubstitutionEventDialog extends StatefulWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => SubstitutionEventDialog(
-        playerOut: playerOut,
-        benchPlayers: benchPlayers,
+        initiator: initiator,
+        fixedPlayer: fixedPlayer,
+        selectablePlayers: selectablePlayers,
         activePeriod: activePeriod,
         onConfirm: onConfirm,
       ),
@@ -431,7 +441,9 @@ class SubstitutionEventDialog extends StatefulWidget {
 
 class _SubstitutionEventDialogState extends State<SubstitutionEventDialog> {
   late final TextEditingController _minuteCtrl;
-  String? _playerInId;
+  String? _selectedId;
+
+  bool get _isBench => widget.initiator == SubstitutionInitiator.bench;
 
   @override
   void initState() {
@@ -458,36 +470,50 @@ class _SubstitutionEventDialogState extends State<SubstitutionEventDialog> {
           _FormHeader(
             label: 'SUSTITUCIÓN',
             color: const Color(0xFF9C27B0),
-            player: widget.playerOut,
+            player: widget.fixedPlayer,
           ),
           const SizedBox(height: 4),
-          const Text('Jugador que SALE del campo',
-              style: TextStyle(color: Colors.grey, fontSize: 11)),
+          Text(
+            _isBench ? 'Jugador que ENTRA al campo' : 'Jugador que SALE del campo',
+            style: const TextStyle(color: Colors.grey, fontSize: 11),
+          ),
           const SizedBox(height: 16),
           _MinuteField(controller: _minuteCtrl),
           const SizedBox(height: 16),
-          const Text('Jugador que ENTRA',
-              style: TextStyle(color: Colors.grey, fontSize: 12)),
+          Text(
+            _isBench ? 'Jugador que SALE' : 'Jugador que ENTRA',
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          ),
           const SizedBox(height: 6),
-          if (widget.benchPlayers.isEmpty)
-            const Text(
-              'No hay suplentes disponibles.',
-              style: TextStyle(color: Colors.grey, fontSize: 13),
+          if (widget.selectablePlayers.isEmpty)
+            Text(
+              _isBench
+                  ? 'No hay jugadores en campo disponibles.'
+                  : 'No hay suplentes disponibles.',
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
             )
           else
             _PlayerDropdown(
-              hint: 'Selecciona el suplente',
-              players: widget.benchPlayers,
-              value: _playerInId,
-              onChanged: (v) => setState(() => _playerInId = v),
+              hint: _isBench ? 'Selecciona el jugador que sale' : 'Selecciona el suplente',
+              players: widget.selectablePlayers,
+              value: _selectedId,
+              onChanged: (v) => setState(() => _selectedId = v),
             ),
           const SizedBox(height: 20),
           _ConfirmButton(
-            enabled: _playerInId != null && widget.benchPlayers.isNotEmpty,
+            enabled: _selectedId != null && widget.selectablePlayers.isNotEmpty,
             onTap: () {
               final min = int.tryParse(_minuteCtrl.text) ?? 0;
               Navigator.pop(context);
-              widget.onConfirm(minute: min, playerInId: _playerInId!);
+              final playerOutId =
+                  _isBench ? _selectedId! : widget.fixedPlayer.playerId;
+              final playerInId =
+                  _isBench ? widget.fixedPlayer.playerId : _selectedId!;
+              widget.onConfirm(
+                minute: min,
+                playerOutId: playerOutId,
+                playerInId: playerInId,
+              );
             },
           ),
         ],

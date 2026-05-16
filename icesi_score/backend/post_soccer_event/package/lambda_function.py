@@ -162,6 +162,12 @@ def lambda_handler(event, context):
             name_row = cur.fetchone()
             player_name = name_row[0] if name_row else None
 
+            player_in_name = None
+            if event_type == "SUBSTITUTION" and secondary_id:
+                cur.execute("SELECT full_name FROM player WHERE id = %s", (secondary_id,))
+                pin_row = cur.fetchone()
+                player_in_name = pin_row[0] if pin_row else None
+
             cur.execute("SELECT home_score, away_score FROM match WHERE id = %s", (match_id,))
             score_row = cur.fetchone()
             home_score = score_row[0]
@@ -171,11 +177,12 @@ def lambda_handler(event, context):
             "id":                event_id,
             "eventType":         event_type,
             "minute":            event_minute,
+            "mainPlayerId":      main_player_id,
             "playerName":        player_name,
             "teamId":            player_team_id,
             "scoreAtMoment":     f"{home_score}-{away_score}",
             "parentEventId":     parent_event_id,
-            "secondaryPlayerName": None,
+            "secondaryPlayerName": player_in_name,
             "note":              note,
         }
 

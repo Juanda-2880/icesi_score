@@ -64,6 +64,11 @@ class _LiveModeScreenState extends State<LiveModeScreen> {
 
   void _onPlayerTap(BuildContext context, LineupPlayer player,
       LiveModeLoadedState state) {
+    final isBenchPlayer = player.status == 'ON_BENCH';
+    final wasSubstitutedOut = isBenchPlayer &&
+        state.events.any((e) =>
+            e.eventType == 'SUBSTITUTION' &&
+            e.mainPlayerId == player.playerId);
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.cardSurface,
@@ -73,8 +78,11 @@ class _LiveModeScreenState extends State<LiveModeScreen> {
       builder: (_) => PlayerEventBottomSheet(
         player: player,
         isHome: player.teamId == widget.match.homeTeamId,
+        isBenchPlayer: isBenchPlayer,
+        wasSubstitutedOut: wasSubstitutedOut,
         onEventSelected: (eventType) =>
-            _onEventSelected(context, eventType, player, state),
+            _onEventSelected(context, eventType, player, state,
+                isBenchPlayer: isBenchPlayer),
       ),
     );
   }
@@ -83,8 +91,9 @@ class _LiveModeScreenState extends State<LiveModeScreen> {
     BuildContext context,
     String eventType,
     LineupPlayer player,
-    LiveModeLoadedState state,
-  ) {
+    LiveModeLoadedState state, {
+    bool isBenchPlayer = false,
+  }) {
     switch (eventType) {
       case 'GOAL':
         final teamOnField = state.lineup
@@ -140,23 +149,55 @@ class _LiveModeScreenState extends State<LiveModeScreen> {
         );
 
       case 'SUBSTITUTION':
-        final benchPlayers = state.lineup
-            .where((p) => p.teamId == player.teamId && p.status == 'ON_BENCH')
-            .toList();
-        SubstitutionEventDialog.show(
-          context,
-          playerOut: player,
-          benchPlayers: benchPlayers,
-          activePeriod: state.activePeriod,
-          onConfirm: ({required int minute, required String playerInId}) {
-            context.read<LiveModeBloc>().add(LiveModeEventSubmittedEvent(
-                  eventType: 'SUBSTITUTION',
-                  mainPlayerId: player.playerId,
-                  eventMinute: minute,
-                  secondaryPlayerId: playerInId,
-                ));
-          },
-        );
+        if (isBenchPlayer) {
+          final fieldPlayers = state.lineup
+              .where((p) =>
+                  p.teamId == player.teamId &&
+                  (p.status == 'STARTER' || p.status == 'ON_FIELD'))
+              .toList();
+          SubstitutionEventDialog.show(
+            context,
+            initiator: SubstitutionInitiator.bench,
+            fixedPlayer: player,
+            selectablePlayers: fieldPlayers,
+            activePeriod: state.activePeriod,
+            onConfirm: ({
+              required int minute,
+              required String playerOutId,
+              required String playerInId,
+            }) {
+              context.read<LiveModeBloc>().add(LiveModeEventSubmittedEvent(
+                    eventType: 'SUBSTITUTION',
+                    mainPlayerId: playerOutId,
+                    eventMinute: minute,
+                    secondaryPlayerId: playerInId,
+                  ));
+            },
+          );
+        } else {
+          final benchPlayers = state.lineup
+              .where((p) => p.teamId == player.teamId && p.status == 'ON_BENCH')
+              .toList();
+          SubstitutionEventDialog.show(
+            context,
+            initiator: SubstitutionInitiator.field,
+            fixedPlayer: player,
+            selectablePlayers: benchPlayers,
+            activePeriod: state.activePeriod,
+            onConfirm: ({
+              required int minute,
+              required String playerOutId,
+              required String playerInId,
+            }) {
+              context.read<LiveModeBloc>().add(LiveModeEventSubmittedEvent(
+                    eventType: 'SUBSTITUTION',
+                    mainPlayerId: playerOutId,
+                    eventMinute: minute,
+                    secondaryPlayerId: playerInId,
+                  ));
+            },
+          );
+        }
 
       case 'NOTE':
         NoteEventDialog.show(
@@ -306,6 +347,7 @@ class _LiveModeBody extends StatelessWidget {
           FootballFieldWidget(
             lineup: state.lineup,
             homeTeamId: homeTeamId,
+            events: state.events,
             onPlayerTap: onPlayerTap,
           ),
           const SizedBox(height: 12),
@@ -314,6 +356,7 @@ class _LiveModeBody extends StatelessWidget {
             homeTeamId: homeTeamId,
             homeTeamName: homeTeamName,
             awayTeamName: awayTeamName,
+            events: state.events,
             onPlayerTap: onPlayerTap,
           ),
           const SizedBox(height: 16),

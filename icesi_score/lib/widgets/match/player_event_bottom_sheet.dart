@@ -5,16 +5,20 @@ import '../../theme/app_theme.dart';
 class PlayerEventBottomSheet extends StatelessWidget {
   final LineupPlayer player;
   final bool isHome;
+  final bool isBenchPlayer;
+  final bool wasSubstitutedOut;
   final void Function(String eventType) onEventSelected;
 
   const PlayerEventBottomSheet({
     super.key,
     required this.player,
     required this.isHome,
+    this.isBenchPlayer = false,
+    this.wasSubstitutedOut = false,
     required this.onEventSelected,
   });
 
-  static const _events = [
+  static const _fieldEvents = [
     _EventOption('GOAL', 'Gol', Icons.sports_soccer, Color(0xFF4CAF50)),
     _EventOption('ASSIST', 'Asistencia', Icons.assistant, Color(0xFF2196F3)),
     _EventOption('YELLOW_CARD', 'Tarjeta Amarilla', Icons.square, Color(0xFFFFEB3B)),
@@ -23,9 +27,27 @@ class PlayerEventBottomSheet extends StatelessWidget {
     _EventOption('NOTE', 'Nota', Icons.note_add, Color(0xFF607D8B)),
   ];
 
+  // Bench player who has never been on the field: can enter via SUBSTITUTION
+  static const _benchEvents = [
+    _EventOption('SUBSTITUTION', 'Sustitución', Icons.swap_horiz, Color(0xFF9C27B0)),
+    _EventOption('YELLOW_CARD', 'Tarjeta Amarilla', Icons.square, Color(0xFFFFEB3B)),
+    _EventOption('RED_CARD', 'Tarjeta Roja', Icons.square, Color(0xFFF44336)),
+    _EventOption('NOTE', 'Nota', Icons.note_add, Color(0xFF607D8B)),
+  ];
+
+  // Substituted-out player: cannot re-enter the field
+  static const _substitutedOutBenchEvents = [
+    _EventOption('YELLOW_CARD', 'Tarjeta Amarilla', Icons.square, Color(0xFFFFEB3B)),
+    _EventOption('RED_CARD', 'Tarjeta Roja', Icons.square, Color(0xFFF44336)),
+    _EventOption('NOTE', 'Nota', Icons.note_add, Color(0xFF607D8B)),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final teamColor = isHome ? AppTheme.teamColorA : AppTheme.teamColorB;
+    final events = isBenchPlayer
+        ? (wasSubstitutedOut ? _substitutedOutBenchEvents : _benchEvents)
+        : _fieldEvents;
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -78,11 +100,28 @@ class PlayerEventBottomSheet extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (isBenchPlayer)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white10,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'BANCA',
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
           const Divider(height: 16, color: Colors.white12),
-          ..._events.map(
+          ...events.map(
             (opt) => _EventTile(
               option: opt,
               onTap: () {

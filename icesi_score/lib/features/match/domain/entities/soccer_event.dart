@@ -3,6 +3,7 @@ class SoccerEvent {
   final String matchId;
   final String eventType;
   final int minute;
+  final String? mainPlayerId;
   final String? playerName;
   final String? teamId;
   final String? teamName;
@@ -16,6 +17,7 @@ class SoccerEvent {
     required this.matchId,
     required this.eventType,
     required this.minute,
+    this.mainPlayerId,
     this.playerName,
     this.teamId,
     this.teamName,

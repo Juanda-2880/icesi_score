@@ -118,11 +118,13 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       matchId: matchId,
       eventType: e['eventType'] as String,
       minute: (e['minute'] as num).toInt(),
+      mainPlayerId: e['mainPlayerId'] as String?,
       playerName: e['playerName'] as String?,
       teamId: e['teamId'] as String?,
       teamName: e['teamName'] as String?,
       scoreAtMoment: e['scoreAtMoment'] as String?,
       parentEventId: e['parentEventId'] as String?,
+      secondaryPlayerName: e['secondaryPlayerName'] as String?,
       note: e['note'] as String?,
     );
   }
@@ -509,6 +511,7 @@ class _EventsSection extends StatelessWidget {
               ),
             )
           else
+            // mainEvents is newest-first; skip(i+1) = events older than current
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -516,10 +519,16 @@ class _EventsSection extends StatelessWidget {
               separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (_, i) {
                 final e = mainEvents[i];
+                final isDoubleYellow = e.eventType == 'YELLOW_CARD' &&
+                    e.mainPlayerId != null &&
+                    mainEvents.skip(i + 1).any((ev) =>
+                        ev.eventType == 'YELLOW_CARD' &&
+                        ev.mainPlayerId == e.mainPlayerId);
                 return SoccerEventCard(
                   key: ValueKey(e.id),
                   event: e,
                   assist: e.eventType == 'GOAL' ? assistMap[e.id] : null,
+                  isDoubleYellow: isDoubleYellow,
                   isExpanded: expandedIds.contains(e.id),
                   onTap: () => onToggleExpand(e.id),
                 );

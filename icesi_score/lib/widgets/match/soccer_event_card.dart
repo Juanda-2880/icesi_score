@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 class SoccerEventCard extends StatelessWidget {
   final SoccerEvent event;
   final SoccerEvent? assist;
+  final bool isDoubleYellow;
   final bool isExpanded;
   final VoidCallback onTap;
 
@@ -12,6 +13,7 @@ class SoccerEventCard extends StatelessWidget {
     super.key,
     required this.event,
     this.assist,
+    this.isDoubleYellow = false,
     required this.isExpanded,
     required this.onTap,
   });
@@ -83,12 +85,38 @@ class SoccerEventCard extends StatelessWidget {
                   Text(_emoji, style: const TextStyle(fontSize: 18)),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      _description,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                      ),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _description,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        if (isDoubleYellow &&
+                            event.eventType == 'YELLOW_CARD') ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 8,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            '(Expulsado)',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   Icon(
@@ -106,14 +134,31 @@ class SoccerEventCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (event.playerName != null)
-                      _DetailRow(
-                        label: 'Jugador',
-                        value: event.playerName!,
-                      ),
-                    if (assist != null) ...[
-                      const SizedBox(height: 8),
-                      _AssistSubRow(assist: assist!),
+                    if (event.eventType == 'SUBSTITUTION') ...[
+                      if (event.playerName != null)
+                        _SubstitutionRow(
+                          icon: Icons.arrow_downward,
+                          color: Colors.red,
+                          name: event.playerName!,
+                        ),
+                      if (event.secondaryPlayerName != null) ...[
+                        const SizedBox(height: 4),
+                        _SubstitutionRow(
+                          icon: Icons.arrow_upward,
+                          color: Colors.green,
+                          name: event.secondaryPlayerName!,
+                        ),
+                      ],
+                    ] else ...[
+                      if (event.playerName != null)
+                        _DetailRow(
+                          label: 'Jugador',
+                          value: event.playerName!,
+                        ),
+                      if (assist != null) ...[
+                        const SizedBox(height: 8),
+                        _AssistSubRow(assist: assist!),
+                      ],
                     ],
                   ],
                 ),
@@ -122,6 +167,32 @@ class SoccerEventCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SubstitutionRow extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String name;
+
+  const _SubstitutionRow({
+    required this.icon,
+    required this.color,
+    required this.name,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 14),
+        const SizedBox(width: 6),
+        Text(
+          name,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+      ],
     );
   }
 }

@@ -35,7 +35,10 @@ class LiveModeBloc extends Bloc<LiveModeEvent, LiveModeState> {
     _currentMatch = event.match;
     emit(const LiveModeLoadingState());
     try {
-      final lineup = await _getLineup(event.match.id);
+      final rawLineup = await _getLineup(event.match.id);
+      // Sort once here so slot indices stay stable across substitutions.
+      final lineup = List<LineupPlayer>.from(rawLineup)
+        ..sort((a, b) => a.jerseyNumber.compareTo(b.jerseyNumber));
       final events = await _getEvents(event.match.id);
       final period = await _getPeriod(event.match.id);
       emit(LiveModeLoadedState(
@@ -80,11 +83,17 @@ class LiveModeBloc extends Bloc<LiveModeEvent, LiveModeState> {
                 : p)
             .toList();
       } else if (event.eventType == 'SUBSTITUTION') {
-        newLineup = newLineup.map((p) {
-          if (p.playerId == event.mainPlayerId) return p.copyWith(status: 'ON_BENCH');
-          if (p.playerId == event.secondaryPlayerId) return p.copyWith(status: 'ON_FIELD');
-          return p;
-        }).toList();
+        final outIdx =
+            newLineup.indexWhere((p) => p.playerId == event.mainPlayerId);
+        final inIdx = newLineup
+            .indexWhere((p) => p.playerId == event.secondaryPlayerId);
+        if (outIdx >= 0 && inIdx >= 0) {
+          // Swap list positions so player_in inherits player_out's field slot.
+          final playerOut = newLineup[outIdx].copyWith(status: 'ON_BENCH');
+          final playerIn = newLineup[inIdx].copyWith(status: 'ON_FIELD');
+          newLineup[outIdx] = playerIn;
+          newLineup[inIdx] = playerOut;
+        }
       }
 
       final refreshedEvents = await _getEvents(_currentMatch!.id);

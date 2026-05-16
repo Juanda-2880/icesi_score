@@ -23,13 +23,21 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedSport = 0;
 
   void _onMatchTap(BuildContext context, Match match) {
+    final footballBloc = context.read<FootballFeedBloc>();
+    final volleyballBloc = context.read<VolleyballFeedBloc>();
+    void reloadFeeds(_) {
+      footballBloc.add(const MatchFeedStartedEvent());
+      volleyballBloc.add(const MatchFeedStartedEvent());
+    }
+
     if (match.sport == 'VOLLEYBALL') {
-      Navigator.pushNamed(context, '/volleyball-detail', arguments: match);
+      Navigator.pushNamed(context, '/volleyball-detail', arguments: match)
+          .then(reloadFeeds);
       return;
     }
     final role = context.read<SessionCubit>().state?.role ?? '';
     final route = role == 'ADMIN' ? '/live-mode' : '/match-detail';
-    Navigator.pushNamed(context, route, arguments: match);
+    Navigator.pushNamed(context, route, arguments: match).then(reloadFeeds);
   }
 
   Future<void> _refresh<B extends MatchFeedBloc>(BuildContext ctx) async {

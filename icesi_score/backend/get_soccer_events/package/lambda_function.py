@@ -59,6 +59,7 @@ def handler(event, _context):
                 SELECT se.id,
                        se.event_type,
                        se.event_minute,
+                       se.main_player_id,
                        p_main.full_name  AS player_name,
                        p_main.team_id    AS team_id,
                        t.name            AS team_name,
@@ -81,7 +82,7 @@ def handler(event, _context):
         events = []
         for row in rows:
             event_type = row[1]
-            team_id = str(row[4]) if row[4] else None
+            team_id = str(row[5]) if row[5] else None
 
             if event_type == "GOAL" and team_id:
                 if team_id == home_team_id:
@@ -93,12 +94,13 @@ def handler(event, _context):
                 "id":                    str(row[0]),
                 "eventType":             event_type,
                 "minute":                row[2],
-                "playerName":            row[3],
+                "mainPlayerId":          str(row[3]) if row[3] else None,
+                "playerName":            row[4],
                 "teamId":                team_id,
-                "teamName":              row[5],
+                "teamName":              row[6],
                 "scoreAtMoment":         f"{home_score}-{away_score}",
-                "parentEventId":         str(row[6]) if row[6] else None,
-                "secondaryPlayerName":   row[7],
+                "parentEventId":         str(row[7]) if row[7] else None,
+                "secondaryPlayerName":   row[8],
             })
 
         # Return most recent first
