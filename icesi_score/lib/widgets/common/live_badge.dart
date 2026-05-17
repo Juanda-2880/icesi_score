@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
-class LiveBadge extends StatelessWidget{
+class LiveBadge extends StatelessWidget {
 
   const LiveBadge({super.key});
 

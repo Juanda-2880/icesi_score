@@ -193,6 +193,8 @@ class _PlayerBubble extends StatelessWidget {
 }
 
 class _FieldPainter extends CustomPainter {
+  const _FieldPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;

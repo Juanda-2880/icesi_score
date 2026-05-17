@@ -37,7 +37,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   void initState() {
     super.initState();
     context.read<MatchDetailBloc>().add(MatchDetailStartedEvent(widget.match));
-    if (widget.match.status == 'IN_PROGRESS') (() async => await _connectWs())();
+    if (widget.match.status == 'IN_PROGRESS') _connectWs();
   }
 
   Future<void> _connectWs() async {

@@ -152,55 +152,34 @@ class _LiveModeScreenState extends State<LiveModeScreen> {
         );
 
       case 'SUBSTITUTION':
-        if (isBenchPlayer) {
-          final fieldPlayers = state.lineup
-              .where((p) =>
-                  p.teamId == player.teamId &&
-                  (p.status == 'STARTER' || p.status == 'ON_FIELD'))
-              .toList();
-          SubstitutionEventDialog.show(
-            context,
-            initiator: SubstitutionInitiator.bench,
-            fixedPlayer: player,
-            selectablePlayers: fieldPlayers,
-            activePeriod: state.activePeriod,
-            onConfirm: ({
-              required int minute,
-              required String playerOutId,
-              required String playerInId,
-            }) {
-              context.read<LiveModeBloc>().add(LiveModeEventSubmittedEvent(
-                    eventType: 'SUBSTITUTION',
-                    mainPlayerId: playerOutId,
-                    eventMinute: minute,
-                    secondaryPlayerId: playerInId,
-                  ));
-            },
-          );
-        } else {
-          final benchPlayers = state.lineup
-              .where((p) => p.teamId == player.teamId && p.status == 'ON_BENCH')
-              .toList();
-          SubstitutionEventDialog.show(
-            context,
-            initiator: SubstitutionInitiator.field,
-            fixedPlayer: player,
-            selectablePlayers: benchPlayers,
-            activePeriod: state.activePeriod,
-            onConfirm: ({
-              required int minute,
-              required String playerOutId,
-              required String playerInId,
-            }) {
-              context.read<LiveModeBloc>().add(LiveModeEventSubmittedEvent(
-                    eventType: 'SUBSTITUTION',
-                    mainPlayerId: playerOutId,
-                    eventMinute: minute,
-                    secondaryPlayerId: playerInId,
-                  ));
-            },
-          );
-        }
+        final selectablePlayers = state.lineup
+            .where((p) =>
+                p.teamId == player.teamId &&
+                (isBenchPlayer
+                    ? (p.status == 'STARTER' || p.status == 'ON_FIELD')
+                    : p.status == 'ON_BENCH'))
+            .toList();
+        SubstitutionEventDialog.show(
+          context,
+          initiator: isBenchPlayer
+              ? SubstitutionInitiator.bench
+              : SubstitutionInitiator.field,
+          fixedPlayer: player,
+          selectablePlayers: selectablePlayers,
+          activePeriod: state.activePeriod,
+          onConfirm: ({
+            required int minute,
+            required String playerOutId,
+            required String playerInId,
+          }) {
+            context.read<LiveModeBloc>().add(LiveModeEventSubmittedEvent(
+                  eventType: 'SUBSTITUTION',
+                  mainPlayerId: playerOutId,
+                  eventMinute: minute,
+                  secondaryPlayerId: playerInId,
+                ));
+          },
+        );
 
       case 'NOTE':
         NoteEventDialog.show(
