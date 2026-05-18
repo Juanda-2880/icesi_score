@@ -50,7 +50,7 @@ class FootballFieldWidget extends StatelessWidget {
         height: h,
         child: Stack(
           children: [
-            CustomPaint(size: Size(w, h), painter: _FieldPainter()),
+            CustomPaint(size: Size(w, h), painter: const _FieldPainter()),
             ..._buildTeamBubbles(homePlayers, w, h, isHome: true),
             ..._buildTeamBubbles(awayPlayers, w, h, isHome: false),
           ],
@@ -193,6 +193,8 @@ class _PlayerBubble extends StatelessWidget {
 }
 
 class _FieldPainter extends CustomPainter {
+  const _FieldPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;

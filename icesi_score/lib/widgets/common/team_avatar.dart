@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class TeamAvatar extends StatelessWidget{
+class TeamAvatar extends StatelessWidget {
   final String initials;
   final Color backgroundColor;
   final double radius;
@@ -10,10 +10,10 @@ class TeamAvatar extends StatelessWidget{
     required this.initials,
     required this.backgroundColor,
     this.radius = 20.0,
-  }) : assert(initials.length <=2 , 'Las iniciales no deben superar 2 caracteres');
+  }) : assert(initials.length <= 2, 'Las iniciales no deben superar 2 caracteres');
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return CircleAvatar(
       radius: radius,
       backgroundColor: backgroundColor,
