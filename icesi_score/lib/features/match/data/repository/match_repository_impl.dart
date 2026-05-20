@@ -236,6 +236,72 @@ class MatchRepositoryImpl implements MatchRepository {
   }
 
   @override
+  Future<VolleyballSet> postVolleyballSet({required String matchId}) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.postVolleyballSet(idToken: idToken, matchId: matchId);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al iniciar el set. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<({
+    VolleyballEvent event,
+    int homeSetScore,
+    int awaySetScore,
+    int homeSets,
+    int awaySets,
+    bool setComplete,
+    bool matchFinished,
+  })> postVolleyballEvent({
+    required String setId,
+    required String eventType,
+    required String teamId,
+    String? mainPlayerId,
+    String? secondaryPlayerId,
+    String? note,
+  }) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.postVolleyballEvent(
+        idToken: idToken,
+        setId: setId,
+        eventType: eventType,
+        teamId: teamId,
+        mainPlayerId: mainPlayerId,
+        secondaryPlayerId: secondaryPlayerId,
+        note: note,
+      );
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al registrar el evento. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<List<LineupPlayer>> rotateTeam({
+    required String matchId,
+    required String teamId,
+  }) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.rotateTeam(
+        idToken: idToken,
+        matchId: matchId,
+        teamId: teamId,
+      );
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al rotar el equipo. Intenta de nuevo.');
+    }
+  }
+
+  @override
   Future<({SoccerEvent event, int homeScore, int awayScore})> postSoccerEvent({
     required String matchId,
     required String eventType,

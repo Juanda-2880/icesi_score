@@ -361,3 +361,51 @@ INSERT INTO match_lineup (id, match_id, player_id, status, position_coordinate) 
   ('c0000004-0000-0000-0000-000000000013', 'd1000000-0000-0000-0000-000000000001', 'c1020000-0000-0000-0000-000000000013', 'ON_BENCH', NULL),
   ('c0000004-0000-0000-0000-000000000014', 'd1000000-0000-0000-0000-000000000001', 'c1020000-0000-0000-0000-000000000014', 'ON_BENCH', NULL),
   ('c0000004-0000-0000-0000-000000000015', 'd1000000-0000-0000-0000-000000000001', 'c1020000-0000-0000-0000-000000000015', 'ON_BENCH', NULL);
+
+
+  -- Lineup Icesi Volley (home) — partido SCHEDULED
+INSERT INTO match_lineup (match_id, player_id, status, position_coordinate)
+SELECT 
+  'd2000000-0000-0000-0000-000000000001',
+  id,
+  'STARTER',
+  CAST(row_number() OVER (ORDER BY jersey_number) AS VARCHAR)
+FROM player 
+WHERE team_id = 'a2000000-0000-0000-0000-000000000001'
+ORDER BY jersey_number 
+LIMIT 6;
+
+-- Lineup Javeriana Volley (away) — partido SCHEDULED
+INSERT INTO match_lineup (match_id, player_id, status, position_coordinate)
+SELECT 
+  'd2000000-0000-0000-0000-000000000001',
+  id,
+  'STARTER',
+  CAST(row_number() OVER (ORDER BY jersey_number) AS VARCHAR)
+FROM player 
+WHERE team_id = 'a2000000-0000-0000-0000-000000000002'
+ORDER BY jersey_number 
+LIMIT 6;
+
+-- Bench — jugadores 7-12 de cada equipo
+INSERT INTO match_lineup (match_id, player_id, status, position_coordinate)
+SELECT 
+  'd2000000-0000-0000-0000-000000000001',
+  id,
+  'ON_BENCH',
+  NULL
+FROM player 
+WHERE team_id = 'a2000000-0000-0000-0000-000000000001'
+ORDER BY jersey_number 
+OFFSET 6 LIMIT 6;
+
+INSERT INTO match_lineup (match_id, player_id, status, position_coordinate)
+SELECT 
+  'd2000000-0000-0000-0000-000000000001',
+  id,
+  'ON_BENCH',
+  NULL
+FROM player 
+WHERE team_id = 'a2000000-0000-0000-0000-000000000002'
+ORDER BY jersey_number 
+OFFSET 6 LIMIT 6;

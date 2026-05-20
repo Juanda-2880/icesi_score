@@ -35,6 +35,9 @@ import 'features/match/domain/usecases/get_soccer_events_usecase.dart';
 import 'features/match/domain/usecases/get_teams_usecase.dart';
 import 'features/match/domain/usecases/get_volleyball_data_usecase.dart';
 import 'features/match/domain/usecases/post_soccer_event_usecase.dart';
+import 'features/match/domain/usecases/post_volleyball_event_usecase.dart';
+import 'features/match/domain/usecases/post_volleyball_set_usecase.dart';
+import 'features/match/domain/usecases/rotate_team_usecase.dart';
 import 'features/match/domain/usecases/update_match_usecase.dart';
 import 'features/match/ui/bloc/create_match_bloc.dart';
 import 'features/match/ui/bloc/live_mode_bloc.dart';
@@ -42,10 +45,12 @@ import 'features/match/ui/bloc/match_detail_bloc.dart';
 import 'features/match/ui/bloc/match_feed_bloc.dart';
 import 'features/match/ui/bloc/match_feed_event.dart';
 import 'features/match/ui/bloc/volleyball_detail_bloc.dart';
+import 'features/match/ui/bloc/volleyball_live_mode_bloc.dart';
 import 'features/match/ui/screens/create_match_screen.dart';
 import 'features/match/ui/screens/live_mode_screen.dart';
 import 'features/match/ui/screens/match_detail_screen.dart';
 import 'features/match/ui/screens/volleyball_detail_screen.dart';
+import 'features/match/ui/screens/volleyball_live_mode_screen.dart';
 import 'features/home/ui/screens/home_screen.dart';
 import 'features/login/ui/bloc/login_bloc.dart';
 import 'features/login/ui/bloc/set_password_bloc.dart';
@@ -251,6 +256,21 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
                 FinishMatchUseCase(repo),
               ),
               child: LiveModeScreen(match: match),
+            );
+          },
+          '/volleyball-live-mode': (ctx) {
+            final match =
+                ModalRoute.of(ctx)!.settings.arguments as Match;
+            final repo = MatchRepositoryImpl(CognitoAuthDataSource());
+            return BlocProvider<VolleyballLiveModeBloc>(
+              create: (_) => VolleyballLiveModeBloc(
+                GetMatchLineupUseCase(repo),
+                GetVolleyballDataUseCase(repo),
+                PostVolleyballSetUseCase(repo),
+                PostVolleyballEventUseCase(repo),
+                RotateTeamUseCase(repo),
+              ),
+              child: VolleyballLiveModeScreen(match: match),
             );
           },
           '/profile': (ctx) {

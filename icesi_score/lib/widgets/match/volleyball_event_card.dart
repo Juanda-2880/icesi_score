@@ -53,6 +53,14 @@ class VolleyballEventCard extends StatelessWidget {
     }
   }
 
+  bool get _hasExpandedContent {
+    if (event.eventType == 'SUBSTITUTION') {
+      return event.playerName != null || event.secondaryPlayerName != null;
+    }
+    if (event.eventType == 'NOTE') return event.note != null;
+    return event.playerName != null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -110,20 +118,53 @@ class VolleyballEventCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (isExpanded && event.playerName != null) ...[
+            if (isExpanded && _hasExpandedContent) ...[
               const Divider(color: Colors.white12, height: 1),
               Padding(
                 padding: const EdgeInsets.fromLTRB(52, 10, 16, 12),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Jugador: ',
-                      style: TextStyle(color: Colors.white38, fontSize: 12),
-                    ),
-                    Text(
-                      event.playerName!,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
+                    if (event.eventType == 'SUBSTITUTION') ...[
+                      if (event.playerName != null)
+                        _SubstitutionRow(
+                          icon: Icons.arrow_downward,
+                          color: Colors.red,
+                          name: event.playerName!,
+                        ),
+                      if (event.secondaryPlayerName != null) ...[
+                        const SizedBox(height: 4),
+                        _SubstitutionRow(
+                          icon: Icons.arrow_upward,
+                          color: Colors.green,
+                          name: event.secondaryPlayerName!,
+                        ),
+                      ],
+                    ] else if (event.eventType == 'NOTE') ...[
+                      if (event.note != null)
+                        Text(
+                          event.note!,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ] else ...[
+                      if (event.playerName != null)
+                        Row(
+                          children: [
+                            const Text(
+                              'Jugador: ',
+                              style: TextStyle(color: Colors.white38, fontSize: 12),
+                            ),
+                            Text(
+                              event.playerName!,
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -131,6 +172,29 @@ class VolleyballEventCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SubstitutionRow extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String name;
+
+  const _SubstitutionRow({
+    required this.icon,
+    required this.color,
+    required this.name,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 14),
+        const SizedBox(width: 6),
+        Text(name, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ],
     );
   }
 }

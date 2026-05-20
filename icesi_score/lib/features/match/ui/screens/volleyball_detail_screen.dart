@@ -50,7 +50,7 @@ class _VolleyballDetailScreenState extends State<VolleyballDetailScreen> {
           if (msg['type'] == 'VOLLEYBALL_EVENT') {
             context
                 .read<VolleyballDetailBloc>()
-                .add(const VolleyballDetailRefreshRequestedEvent());
+                .add(VolleyballDetailWsEventReceivedEvent(msg));
           }
         },
         onError: (_) {},

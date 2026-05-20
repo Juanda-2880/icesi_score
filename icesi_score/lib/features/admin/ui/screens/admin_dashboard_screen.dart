@@ -165,7 +165,7 @@ class _AdminBodyState extends State<_AdminBody> {
     final footballBloc = context.read<FootballFeedBloc>();
     final volleyballBloc = context.read<VolleyballFeedBloc>();
     final route =
-        match.sport == 'VOLLEYBALL' ? '/volleyball-detail' : '/live-mode';
+        match.sport == 'VOLLEYBALL' ? '/volleyball-live-mode' : '/live-mode';
     Navigator.pushNamed(context, route, arguments: match).then((_) {
       footballBloc.add(const MatchFeedStartedEvent());
       volleyballBloc.add(const MatchFeedStartedEvent());

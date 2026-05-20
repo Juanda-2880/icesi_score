@@ -1,4 +1,4 @@
-.PHONY: db-up db-migrate db-seed db-connect db-down venv superadmin-seed lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build post-match-period-build put-match-period-build patch-match-finish-build
+.PHONY: db-up db-migrate db-seed db-connect db-down venv superadmin-seed lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build post-match-period-build put-match-period-build patch-match-finish-build post-volleyball-set-build post-volleyball-event-build post-rotate-team-build
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -327,9 +327,54 @@ patch-match-finish-build: venv
 	 echo "✓ Paquete Lambda listo en $$PKG"
 
 # ---------------------------------------------------------------------------
+# post-volleyball-set-build — empaqueta post_volleyball_set con psycopg2+boto3
+# ---------------------------------------------------------------------------
+post-volleyball-set-build: venv
+	@PKG="backend/post_volleyball_set/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary boto3 \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/post_volleyball_set/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
+# post-volleyball-event-build — empaqueta post_volleyball_event con psycopg2+boto3
+# ---------------------------------------------------------------------------
+post-volleyball-event-build: venv
+	@PKG="backend/post_volleyball_event/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary boto3 \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/post_volleyball_event/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
+# post-rotate-team-build — empaqueta post_rotate_team con psycopg2
+# ---------------------------------------------------------------------------
+post-rotate-team-build: venv
+	@PKG="backend/post_rotate_team/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/post_rotate_team/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
 # db-up — abre acceso público temporal desde la IP del desarrollador
 # ---------------------------------------------------------------------------
-db-up: lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build post-match-period-build put-match-period-build patch-match-finish-build
+db-up: lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build post-match-period-build put-match-period-build patch-match-finish-build post-volleyball-set-build post-volleyball-event-build post-rotate-team-build
 	@echo "Obteniendo IP pública…"
 	@MY_IP=$$(curl -s https://ifconfig.me) && \
 	 echo "IP detectada: $$MY_IP" && \

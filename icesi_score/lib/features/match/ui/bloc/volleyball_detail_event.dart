@@ -14,8 +14,14 @@ class VolleyballDetailRefreshRequestedEvent extends VolleyballDetailEvent {
   const VolleyballDetailRefreshRequestedEvent();
 }
 
-// Hook for US-11/US-16 WebSocket broadcast — handler wired but unused until then.
+// Pre-wired hook (kept for future use).
 class VolleyballEventReceivedEvent extends VolleyballDetailEvent {
   final VolleyballEvent event;
   const VolleyballEventReceivedEvent(this.event);
+}
+
+// Incremental WS update: carries the raw VOLLEYBALL_EVENT message payload.
+class VolleyballDetailWsEventReceivedEvent extends VolleyballDetailEvent {
+  final Map<String, dynamic> wsMessage;
+  const VolleyballDetailWsEventReceivedEvent(this.wsMessage);
 }

@@ -115,7 +115,8 @@ CREATE TABLE volleyball_event (
     secondary_player_id UUID REFERENCES player(id) ON DELETE RESTRICT,
     id_team             UUID NOT NULL REFERENCES team(id) ON DELETE RESTRICT,
     event_timestamp     TIMESTAMP NOT NULL DEFAULT NOW(),
-    score_moment        VARCHAR(20)
+    score_moment        VARCHAR(20),
+    note                TEXT
 );
 
 -- ---------------------------------------------------------------------------

@@ -4,9 +4,11 @@ class VolleyballEvent {
   final int setNumber;
   final String eventType;
   final String? playerName;
+  final String? secondaryPlayerName;
   final String? teamId;
   final String? teamName;
   final String? scoreMoment;
+  final String? note;
 
   const VolleyballEvent({
     required this.id,
@@ -14,8 +16,10 @@ class VolleyballEvent {
     required this.setNumber,
     required this.eventType,
     this.playerName,
+    this.secondaryPlayerName,
     this.teamId,
     this.teamName,
     this.scoreMoment,
+    this.note,
   });
 }

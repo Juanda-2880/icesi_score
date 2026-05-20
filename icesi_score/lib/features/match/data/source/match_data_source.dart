@@ -43,6 +43,32 @@ abstract class MatchDataSource {
   Future<void> finishMatch({required String idToken, required String matchId});
   Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(String idToken, String matchId);
   Future<List<LineupPlayer>> getMatchLineup(String idToken, String matchId);
+  Future<VolleyballSet> postVolleyballSet({
+    required String idToken,
+    required String matchId,
+  });
+  Future<({
+    VolleyballEvent event,
+    int homeSetScore,
+    int awaySetScore,
+    int homeSets,
+    int awaySets,
+    bool setComplete,
+    bool matchFinished,
+  })> postVolleyballEvent({
+    required String idToken,
+    required String setId,
+    required String eventType,
+    required String teamId,
+    String? mainPlayerId,
+    String? secondaryPlayerId,
+    String? note,
+  });
+  Future<List<LineupPlayer>> rotateTeam({
+    required String idToken,
+    required String matchId,
+    required String teamId,
+  });
   Future<({SoccerEvent event, int homeScore, int awayScore})> postSoccerEvent({
     required String idToken,
     required String matchId,
