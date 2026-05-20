@@ -335,6 +335,99 @@ Todos los endpoints requieren JWT de Cognito en el encabezado `Authorization`. L
 
 ---
 
+## Sprint 3 — Modo Live Completo: Reloj, Campo y Voleibol
+
+### Contexto
+
+Sprint 3 completa el ciclo de vida de un partido en tiempo real para ambos deportes. Para fútbol se incorpora la máquina de estados del reloj (primer tiempo, descanso, segundo tiempo, finalizado) y se consolidan las correcciones pendientes del campo interactivo. Para voleibol se introduce la gestión de sets con cierre automático por puntuación y la cancha interactiva con rotaciones, registro de eventos y sincronización incremental vía WebSocket.
+
+---
+
+### Flujo 1 — Reloj del Partido (US-15)
+
+El Admin controla el ciclo temporal del partido desde el `LiveModeScreen` mediante un único botón con cuatro estados secuenciales: **Iniciar 1er Tiempo → Finalizar 1er Tiempo → Iniciar 2do Tiempo → Finalizar Partido**. No es posible saltarse ningún estado ni retroceder.
+
+**Iniciar un período.** Al tocar el botón de inicio, la app envía `POST /admin/match-periods` con el `matchId` y el `periodLabel` (`1T` o `2T`). El Lambda `post_match_period` inserta una fila en `match_period` con `start_time = NOW()` y rechaza la solicitud con código `409` si ya hay otro período activo. Si el partido estaba en `SCHEDULED`, el status pasa automáticamente a `IN_PROGRESS` en la misma transacción. Tras confirmar, el Lambda publica en SNS un mensaje de tipo `CLOCK_UPDATE` con `action: START`, el `periodLabel`, el `startTime` y el `periodId`.
+
+**Reloj en pantalla.** Tanto el Admin como el aficionado calculan el tiempo transcurrido de forma puramente local: al recibir el `startTime` del período activo, arrancan un `Timer` que recalcula `MM:SS` cada segundo comparando `DateTime.now()` contra ese instante. No hay ningún polling al servidor en cada tick. En la pantalla del aficionado, el encabezado muestra la etiqueta del período junto al reloj corriendo (por ejemplo, `1T · 23:45`). Entre períodos, cuando no hay período activo pero el partido aún no ha finalizado, el encabezado muestra `Descanso`.
+
+**Finalizar el partido.** Al tocar el botón mientras el segundo tiempo está activo, la app envía `PATCH /admin/matches/{id}/finish`. El Lambda `patch_match_finish` cierra el período activo escribiendo `end_time = NOW()` y actualiza el status del partido a `FINISHED` en una única transacción. A continuación publica en SNS el mensaje `CLOCK_UPDATE` con `action: FINISHED`. Desde ese momento la pantalla del Admin bloquea el campo interactivo con `IgnorePointer` y muestra el banner de partido finalizado.
+
+**Sincronización con el aficionado.** Al recibir un mensaje `CLOCK_UPDATE` por WebSocket, la pantalla del aficionado actualiza el layout en tiempo real sin pull-to-refresh: cuando `action` es `START`, monta el `RunningClock` con el `startTime` recibido y cambia la etiqueta del período; cuando `action` es `FINISHED`, desmonta el reloj y muestra el marcador final.
+
+**Ordenamiento de eventos.** Los eventos de ambos períodos se consultan con `ORDER BY created_at DESC`, lo que garantiza que los eventos registrados en el segundo tiempo aparezcan siempre encima de los del primero en la línea de tiempo, independientemente del minuto registrado manualmente.
+
+---
+
+### Flujo 2 — Campo Interactivo (US-11, correcciones Sprint 3)
+
+Sprint 3 consolida una serie de correcciones en el `FootballFieldWidget` y en los flujos de registro del `LiveModeScreen`.
+
+**Formación y posicionamiento.** La formación 1-4-4-2 es fija para ambos equipos. Los jugadores locales se posicionan en la mitad inferior del campo y los visitantes en la superior. Cada línea (portero, defensas, mediocampistas y delanteros) tiene un desplazamiento vertical fijo del 11 % de la altura total; ningún delantero alcanza la línea de mediocampo y no existe solapamiento visual entre jugadores de distintos equipos.
+
+**Jugadores expulsados.** Cuando el status de un jugador cambia a `EXPELLED`, su burbuja pasa a color gris y muestra un indicador rojo en la esquina superior derecha. El jugador permanece visible en su posición del campo, pero un `IgnorePointer` envuelve su burbuja para impedir que el Admin le registre eventos adicionales. El mismo comportamiento aplica en la sección de banca.
+
+**Tarjetas amarillas.** Al registrar una tarjeta amarilla, el BLoC actualiza la lista de eventos en memoria y aparece de inmediato un indicador amarillo en la burbuja del jugador. Si ese mismo jugador acumula dos tarjetas amarillas, el indicador pasa a rojo y la burbuja se torna gris, replicando visualmente el estado de expulsado. Este cambio es únicamente una indicación local para el Admin; el jugador queda formalmente expulsado en el sistema solo cuando el Admin registra la tarjeta roja correspondiente.
+
+**Herencia de posición en la sustitución.** Al confirmar la sustitución, el jugador entrante ocupa exactamente la misma ranura del campo que tenía el saliente: el BLoC permuta las posiciones directamente en la lista en memoria antes de emitir el nuevo estado, de modo que ningún otro jugador se desplaza y el re-render es inmediato.
+
+**Jugador saliente no puede re-entrar.** La banca distingue entre suplentes originales y jugadores que ya abandonaron el campo. Cuando el Admin toca un suplente que ya fue sustituido, el menú inferior no ofrece la opción de Sustitución; solo aparecen Tarjeta Amarilla, Tarjeta Roja y Nota.
+
+**Recarga automática del feed.** Al regresar desde cualquier pantalla de partido, el feed se recarga automáticamente mediante un `PopScope` que dispara el evento de recarga del BLoC del feed, garantizando que el marcador y el estado del partido sean siempre consistentes sin necesidad de pull-to-refresh manual.
+
+---
+
+### Flujo 3 — Gestión de Sets (US-16)
+
+La gestión de sets es la contraparte en voleibol del reloj de fútbol: controla la apertura y el cierre de cada unidad de juego dentro del partido.
+
+**Iniciar un set.** Mientras no hay un set activo y el partido no ha finalizado, la pantalla del Admin muestra el botón `Iniciar Set N`, donde N es el número de sets ya jugados más uno. Al tocarlo, la app envía `POST /admin/volleyball-sets` con el `matchId`. El Lambda `post_volleyball_set` verifica que el partido sea de voleibol, que no exista ya un set activo, y que ningún equipo haya alcanzado aún los 3 sets ganados. Luego inserta la fila en `volleyball_set` con `current_home_score = 0`, `current_away_score = 0` y `start_time = NOW()`. Si el partido estaba en `SCHEDULED`, pasa a `IN_PROGRESS` en la misma transacción. Tras confirmar, el Lambda publica en SNS un mensaje de tipo `SET_STARTED` con el `setId`, `setNumber` y `startTime`.
+
+**Cierre automático del set.** El cierre no se inicia desde Flutter: ocurre dentro del Lambda `post_volleyball_event` cada vez que se registra un punto. Tras actualizar el marcador del set, el Lambda evalúa la condición de victoria: 25 puntos con ventaja de al menos 2 tantos para los sets 1 al 4, o 15 puntos con ventaja de al menos 2 para el 5to set. Si se cumple, el Lambda escribe `end_time = NOW()` en `volleyball_set`, incrementa `home_score` o `away_score` del partido, y evalúa si algún equipo llegó a 3 sets ganados. Si es así, el partido pasa a `FINISHED` de forma automática. Toda esta secuencia ocurre en una única transacción de base de datos; Flutter nunca toma esta decisión.
+
+**Marcador global de sets.** El encabezado de la pantalla del Admin y la del aficionado muestran los sets ganados por cada equipo en todo momento. En la pantalla del aficionado, el marcador se actualiza en tiempo real a través del WebSocket: los mensajes `VOLLEYBALL_EVENT` con `setComplete: true` o `matchFinished: true` llevan el campo `matchScore` con los contadores actualizados, y el BLoC parchea el objeto `_currentMatch` antes de disparar el refresh completo de datos.
+
+---
+
+### Flujo 4 — Cancha Interactiva (US-17/US-18)
+
+La cancha interactiva de voleibol sigue la misma filosofía visual que el campo de fútbol, adaptada a la mecánica de posiciones y rotaciones del deporte.
+
+**Posicionamiento.** Cada equipo mantiene 6 jugadores con status `ON_FIELD` o `STARTER` distribuidos en las posiciones 1 a 6 según la rotación estándar. Cada posición numérica se mapea a coordenadas fraccionarias fijas dentro de la mitad de cancha correspondiente; por convención, la posición 1 ocupa la esquina trasera derecha. La burbuja de cada jugador muestra el número de camiseta dentro de un `CircleAvatar` coloreado según el equipo, y un badge naranja en la esquina superior derecha con el número de posición actual.
+
+**Rotación.** La pantalla tiene dos botones de rotación, uno para el equipo local y otro para el visitante. Al tocar uno, la app envía `POST /admin/matches/{id}/rotate-team` con el `teamId`. El Lambda `post_rotate_team` ejecuta un `UPDATE` sobre `match_lineup` con una expresión `CASE` que desplaza todas las posiciones en sentido horario: `1→6, 2→1, 3→2, 4→3, 5→4, 6→5`. La respuesta incluye la nueva asignación de posiciones, y el BLoC actualiza la alineación en memoria para que el re-render de la cancha sea inmediato. El broadcast de rotación no se propaga por WebSocket porque el posicionamiento en cancha es información exclusiva del Admin.
+
+**Registro de eventos.** Al tocar un jugador en cancha o en la banca, aparece un panel inferior con los eventos disponibles. `POINT`, `SERVICE_ACE` y `BLOCK` suman un punto al marcador del set del equipo del jugador. `ROTATION_FAULT` suma el punto al equipo contrario. La sustitución actualiza los status en `match_lineup` y el jugador entrante hereda el `position_coordinate` del saliente. El evento `NOTE` permite registrar una anotación libre que queda almacenada en base de datos y es visible para el aficionado al expandir la tarjeta en la línea de tiempo.
+
+**Sincronización incremental con el aficionado.** Cada evento de voleibol publica un mensaje `VOLLEYBALL_EVENT` en SNS hacia `ws_broadcaster`. En la pantalla del aficionado, si el set continúa activo, el BLoC actualiza de forma incremental el marcador del set activo y antepone el nuevo evento a la lista sin recargar toda la pantalla. Cuando el set termina (`setComplete: true`) o el partido finaliza (`matchFinished: true`), el BLoC parchea el marcador de sets del encabezado y dispara un refresh completo desde la API para obtener el estado actualizado de todos los sets.
+
+---
+
+### Decisiones de Infraestructura Sprint 3
+
+Los Lambdas de escritura incorporados en este sprint (`post_match_period`, `put_match_period`, `patch_match_finish`, `post_volleyball_set`, `post_volleyball_event` y `post_rotate_team`) siguen el mismo patrón que `post_soccer_event` del Sprint 2: corren fuera de la VPC para poder alcanzar SNS sin necesidad de un NAT Gateway ni VPC Endpoints. La RDS sigue siendo accesible mediante credenciales y `sslmode=require`, por lo que sacar las funciones de la VPC no modifica el nivel de seguridad de la base de datos.
+
+`post_rotate_team` es el único Lambda de escritura de voleibol que no publica en SNS. La rotación de posiciones es una operación exclusiva del Admin y los aficionados no reciben ni muestran las posiciones de los jugadores, de modo que no existe un receptor WebSocket para ese evento.
+
+La lógica de cierre de set y de fin de partido vive íntegramente en `post_volleyball_event`. Flutter nunca evalúa si un set debe cerrarse ni si el partido debe terminar: solo recibe la señal a través del campo `setComplete` o `matchFinished` de la respuesta HTTP (Admin) o del mensaje WebSocket (aficionado) y reacciona en consecuencia. Esta decisión evita condiciones de carrera entre clientes y garantiza que el estado persistido en la base de datos sea siempre la fuente de verdad.
+
+---
+
+### Referencia de Endpoints REST — Sprint 3
+
+Todos los endpoints requieren JWT de Cognito en el encabezado `Authorization`. Los endpoints bajo `/admin/` validan el rol consultando `app_users` en PostgreSQL.
+
+| Método | Ruta | Lambda | Acceso |
+|--------|------|--------|--------|
+| `POST` | `/admin/match-periods` | `post_match_period` | ADMIN, SUPERADMIN |
+| `PUT` | `/admin/match-periods/{id}` | `put_match_period` | ADMIN, SUPERADMIN |
+| `PATCH` | `/admin/matches/{id}/finish` | `patch_match_finish` | ADMIN, SUPERADMIN |
+| `POST` | `/admin/volleyball-sets` | `post_volleyball_set` | ADMIN, SUPERADMIN |
+| `POST` | `/admin/volleyball-events` | `post_volleyball_event` | ADMIN, SUPERADMIN |
+| `POST` | `/admin/matches/{id}/rotate-team` | `post_rotate_team` | ADMIN, SUPERADMIN |
+
+---
+
 ## Arquitectura Frontend: Clean Architecture + BLoC
 
 El frontend sigue **Clean Architecture** combinada con **BLoC**. La regla fundamental es que las capas externas dependen de las internas, nunca al revés. El dominio no conoce Flutter, ni Amplify, ni HTTP.
