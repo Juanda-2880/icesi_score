@@ -159,6 +159,59 @@ class MatchRepositoryImpl implements MatchRepository {
   }
 
   @override
+  Future<({MatchPeriod? activePeriod, List<String> closedPeriodLabels})>
+      getMatchPeriods(String matchId) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.getMatchPeriods(idToken, matchId);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al obtener períodos. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<MatchPeriod> postMatchPeriod({
+    required String matchId,
+    required String periodLabel,
+  }) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      return _matchApi.postMatchPeriod(
+          idToken: idToken, matchId: matchId, periodLabel: periodLabel);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al iniciar el período. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<void> endMatchPeriod(String periodId) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      await _matchApi.endMatchPeriod(idToken: idToken, periodId: periodId);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al cerrar el período. Intenta de nuevo.');
+    }
+  }
+
+  @override
+  Future<void> finishMatch(String matchId) async {
+    try {
+      final idToken = await _cognito.getIdToken();
+      await _matchApi.finishMatch(idToken: idToken, matchId: matchId);
+    } on MatchException {
+      rethrow;
+    } on Exception {
+      throw const MatchException('Error al finalizar el partido. Intenta de nuevo.');
+    }
+  }
+
+  @override
   Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(String matchId) async {
     try {
       final idToken = await _cognito.getIdToken();

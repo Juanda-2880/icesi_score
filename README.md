@@ -156,6 +156,8 @@ Las siguientes limitaciones están identificadas y se abordarán en sprints futu
 
 3. **La RDS es públicamente accesible por diseño de desarrollo (free tier).** En un entorno de producción se recomienda: RDS privada en VPC, NAT Gateway o VPC Endpoints para las Lambdas que lo requieran, y remover el ingress `0.0.0.0/0` del security group de la base de datos.
 
+4. **El aficionado no ve la transición SCHEDULED → IN_PROGRESS en tiempo real si ya tenía la pantalla abierta.** El WebSocket del `MatchDetailScreen` solo se conecta cuando el partido llega con estado `IN_PROGRESS`. Si el aficionado abrió la pantalla mientras el partido estaba `SCHEDULED` y el Admin inicia el primer tiempo después, el aficionado no recibirá el mensaje `CLOCK_UPDATE START`. Debe hacer pull-to-refresh para ver el partido en vivo. Esto es un compromiso conocido del MVP para evitar conexiones WebSocket en partidos no iniciados.
+
 ---
 
 ## Sprint 2 — Gestión y Visualización de Partidos

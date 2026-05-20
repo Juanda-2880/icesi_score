@@ -37,6 +37,10 @@ abstract class MatchDataSource {
   Future<void> deleteMatch({required String idToken, required String id});
   Future<List<SoccerEvent>> getSoccerEvents(String idToken, String matchId);
   Future<MatchPeriod?> getActivePeriod(String idToken, String matchId);
+  Future<({MatchPeriod? activePeriod, List<String> closedPeriodLabels})> getMatchPeriods(String idToken, String matchId);
+  Future<MatchPeriod> postMatchPeriod({required String idToken, required String matchId, required String periodLabel});
+  Future<void> endMatchPeriod({required String idToken, required String periodId});
+  Future<void> finishMatch({required String idToken, required String matchId});
   Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(String idToken, String matchId);
   Future<List<LineupPlayer>> getMatchLineup(String idToken, String matchId);
   Future<({SoccerEvent event, int homeScore, int awayScore})> postSoccerEvent({

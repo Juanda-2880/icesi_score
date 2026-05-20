@@ -33,3 +33,17 @@ class LiveModeWsEventReceivedEvent extends LiveModeEvent {
   final Map<String, dynamic> wsMessage;
   const LiveModeWsEventReceivedEvent(this.wsMessage);
 }
+
+class StartPeriodEvent extends LiveModeEvent {
+  final String periodLabel;
+  const StartPeriodEvent(this.periodLabel);
+}
+
+class EndPeriodEvent extends LiveModeEvent {
+  final String periodId;
+  const EndPeriodEvent(this.periodId);
+}
+
+class FinishMatchEvent extends LiveModeEvent {
+  const FinishMatchEvent();
+}

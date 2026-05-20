@@ -25,11 +25,13 @@ class MatchDetailLoadedState extends MatchDetailState {
     Match? match,
     List<SoccerEvent>? events,
     MatchPeriod? activePeriod,
+    bool clearActivePeriod = false,
   }) =>
       MatchDetailLoadedState(
         match: match ?? this.match,
         events: events ?? this.events,
-        activePeriod: activePeriod ?? this.activePeriod,
+        activePeriod:
+            clearActivePeriod ? null : (activePeriod ?? this.activePeriod),
       );
 }
 

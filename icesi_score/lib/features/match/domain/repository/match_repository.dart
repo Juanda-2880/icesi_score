@@ -35,6 +35,10 @@ abstract class MatchRepository {
   Future<void> deleteMatch(String id);
   Future<List<SoccerEvent>> getSoccerEvents(String matchId);
   Future<MatchPeriod?> getActivePeriod(String matchId);
+  Future<({MatchPeriod? activePeriod, List<String> closedPeriodLabels})> getMatchPeriods(String matchId);
+  Future<MatchPeriod> postMatchPeriod({required String matchId, required String periodLabel});
+  Future<void> endMatchPeriod(String periodId);
+  Future<void> finishMatch(String matchId);
   Future<({List<VolleyballSet> sets, List<VolleyballEvent> events})> getVolleyballData(String matchId);
   Future<List<LineupPlayer>> getMatchLineup(String matchId);
   Future<({SoccerEvent event, int homeScore, int awayScore})> postSoccerEvent({

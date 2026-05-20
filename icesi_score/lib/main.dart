@@ -24,8 +24,12 @@ import 'features/match/domain/entities/match.dart';
 import 'features/match/domain/usecases/create_match_usecase.dart';
 import 'features/match/domain/usecases/delete_match_usecase.dart';
 import 'features/match/domain/usecases/get_leagues_usecase.dart';
+import 'features/match/domain/usecases/end_match_period_usecase.dart';
+import 'features/match/domain/usecases/finish_match_usecase.dart';
 import 'features/match/domain/usecases/get_match_period_usecase.dart';
+import 'features/match/domain/usecases/get_match_periods_usecase.dart';
 import 'features/match/domain/usecases/get_match_lineup_usecase.dart';
+import 'features/match/domain/usecases/post_match_period_usecase.dart';
 import 'features/match/domain/usecases/get_matches_usecase.dart';
 import 'features/match/domain/usecases/get_soccer_events_usecase.dart';
 import 'features/match/domain/usecases/get_teams_usecase.dart';
@@ -241,7 +245,10 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
                 GetMatchLineupUseCase(repo),
                 PostSoccerEventUseCase(repo),
                 GetSoccerEventsUseCase(repo),
-                GetMatchPeriodUseCase(repo),
+                GetMatchPeriodsUseCase(repo),
+                PostMatchPeriodUseCase(repo),
+                EndMatchPeriodUseCase(repo),
+                FinishMatchUseCase(repo),
               ),
               child: LiveModeScreen(match: match),
             );

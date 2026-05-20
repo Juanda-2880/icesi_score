@@ -8,8 +8,10 @@ import '../../../../amplifyconfiguration.dart' show wsBaseUrl;
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/match/football_field_widget.dart';
 import '../../../../widgets/match/player_event_bottom_sheet.dart';
+import '../../../../widgets/match/running_clock.dart';
 import '../../domain/entities/lineup_player.dart';
 import '../../domain/entities/match.dart';
+import '../../domain/entities/match_period.dart';
 import '../bloc/live_mode_bloc.dart';
 import '../bloc/live_mode_event.dart';
 import '../bloc/live_mode_state.dart';
@@ -44,7 +46,8 @@ class _LiveModeScreenState extends State<LiveModeScreen> {
       _channel!.stream.listen(
         (raw) {
           final msg = jsonDecode(raw as String) as Map<String, dynamic>;
-          if (msg['type'] == 'SOCCER_EVENT' && mounted) {
+          if (!mounted) return;
+          if (msg['type'] == 'SOCCER_EVENT') {
             context
                 .read<LiveModeBloc>()
                 .add(LiveModeWsEventReceivedEvent(msg));
@@ -283,6 +286,10 @@ class _LiveModeScreenState extends State<LiveModeScreen> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _LiveModeBody
+// ---------------------------------------------------------------------------
+
 class _LiveModeBody extends StatelessWidget {
   final LiveModeLoadedState state;
   final String matchId;
@@ -302,6 +309,8 @@ class _LiveModeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isFinished = state.match.status == 'FINISHED';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -313,7 +322,12 @@ class _LiveModeBody extends StatelessWidget {
             awayScore: state.awayScore,
             periodLabel: state.activePeriod?.periodLabel,
           ),
-          if (state.activePeriod == null) ...[
+          const SizedBox(height: 8),
+          _ClockSection(
+            state: state,
+            matchId: matchId,
+          ),
+          if (!isFinished && state.activePeriod == null) ...[
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
@@ -340,24 +354,56 @@ class _LiveModeBody extends StatelessWidget {
               ),
             ),
           ],
+          if (isFinished) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.sports_score, color: Colors.red, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Partido Finalizado — No se pueden registrar más eventos.',
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           if (state.isSubmitting)
             const LinearProgressIndicator(color: AppTheme.primaryColor),
           const SizedBox(height: 8),
-          FootballFieldWidget(
-            lineup: state.lineup,
-            homeTeamId: homeTeamId,
-            events: state.events,
-            onPlayerTap: onPlayerTap,
+          // IgnorePointer disables all player taps when match is FINISHED
+          IgnorePointer(
+            ignoring: isFinished,
+            child: FootballFieldWidget(
+              lineup: state.lineup,
+              homeTeamId: homeTeamId,
+              events: state.events,
+              onPlayerTap: onPlayerTap,
+            ),
           ),
           const SizedBox(height: 12),
-          FootballBenchWidget(
-            lineup: state.lineup,
-            homeTeamId: homeTeamId,
-            homeTeamName: homeTeamName,
-            awayTeamName: awayTeamName,
-            events: state.events,
-            onPlayerTap: onPlayerTap,
+          IgnorePointer(
+            ignoring: isFinished,
+            child: FootballBenchWidget(
+              lineup: state.lineup,
+              homeTeamId: homeTeamId,
+              homeTeamName: homeTeamName,
+              awayTeamName: awayTeamName,
+              events: state.events,
+              onPlayerTap: onPlayerTap,
+            ),
           ),
           const SizedBox(height: 16),
         ],
@@ -365,6 +411,129 @@ class _LiveModeBody extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// _ClockSection — StatelessWidget shell that reads BLoC state for the button,
+// and mounts _RunningClock (StatefulWidget) when a period is active.
+// ---------------------------------------------------------------------------
+
+class _ClockSection extends StatelessWidget {
+  final LiveModeLoadedState state;
+  final String matchId;
+
+  const _ClockSection({required this.state, required this.matchId});
+
+  String _nextPeriodLabel() {
+    if (state.closedPeriodLabels.contains('1T')) return '2T';
+    return '1T';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFinished = state.match.status == 'FINISHED';
+    final activePeriod = state.activePeriod;
+    final has1TClosed = state.closedPeriodLabels.contains('1T');
+
+    return Column(
+      children: [
+        // Running clock — only visible when a period is active
+        if (activePeriod != null)
+          RunningClock(startTime: activePeriod.startTime),
+
+        const SizedBox(height: 8),
+
+        // Clock button
+        if (!isFinished)
+          _ClockButton(
+            label: _buttonLabel(activePeriod, has1TClosed),
+            onPressed: () => _handleClockAction(context, activePeriod, has1TClosed),
+            isLoading: state.isSubmitting,
+          )
+        else
+          _ClockButton(
+            label: 'Partido Finalizado',
+            onPressed: null,
+            isLoading: false,
+          ),
+      ],
+    );
+  }
+
+  String _buttonLabel(MatchPeriod? activePeriod, bool has1TClosed) {
+    if (activePeriod != null) {
+      return activePeriod.periodLabel == '2T'
+          ? 'Finalizar Partido'
+          : 'Finalizar ${activePeriod.periodLabel == '1T' ? '1er' : '2do'} Tiempo';
+    }
+    if (!has1TClosed) return 'Iniciar 1er Tiempo';
+    return 'Iniciar 2do Tiempo';
+  }
+
+  void _handleClockAction(
+      BuildContext context, MatchPeriod? activePeriod, bool has1TClosed) {
+    if (activePeriod != null) {
+      if (activePeriod.periodLabel == '2T') {
+        context.read<LiveModeBloc>().add(const FinishMatchEvent());
+      } else {
+        context
+            .read<LiveModeBloc>()
+            .add(EndPeriodEvent(activePeriod.id));
+      }
+    } else {
+      context
+          .read<LiveModeBloc>()
+          .add(StartPeriodEvent(_nextPeriodLabel()));
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _ClockButton — purely presentational StatelessWidget
+// ---------------------------------------------------------------------------
+
+class _ClockButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  const _ClockButton({
+    required this.label,
+    required this.onPressed,
+    required this.isLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: isLoading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2),
+              )
+            : const Icon(Icons.timer, size: 18),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: onPressed == null
+              ? Colors.grey.shade700
+              : AppTheme.primaryColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _ScoreHeader
+// ---------------------------------------------------------------------------
 
 class _ScoreHeader extends StatelessWidget {
   final String homeTeamName;

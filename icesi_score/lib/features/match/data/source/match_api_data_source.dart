@@ -240,23 +240,112 @@ class MatchApiDataSource implements MatchDataSource {
 
   @override
   Future<MatchPeriod?> getActivePeriod(String idToken, String matchId) async {
+    final result = await getMatchPeriods(idToken, matchId);
+    return result.activePeriod;
+  }
+
+  @override
+  Future<({MatchPeriod? activePeriod, List<String> closedPeriodLabels})>
+      getMatchPeriods(String idToken, String matchId) async {
     final response = await _client.get(
       Uri.parse('$_kApiBase/matches/$matchId/periods'),
       headers: {'Authorization': 'Bearer $idToken'},
     );
 
     if (response.statusCode == 200) {
+      final list = jsonDecode(response.body) as List<dynamic>;
+      MatchPeriod? activePeriod;
+      final closedLabels = <String>[];
+      for (final item in list) {
+        final e = item as Map<String, dynamic>;
+        if (e['endTime'] == null) {
+          activePeriod = MatchPeriod(
+            id: e['id'] as String,
+            periodLabel: e['periodLabel'] as String,
+            startTime:
+                DateTime.parse('${e['startTime'] as String}Z').toLocal(),
+          );
+        } else {
+          closedLabels.add(e['periodLabel'] as String);
+        }
+      }
+      return (activePeriod: activePeriod, closedPeriodLabels: closedLabels);
+    }
+
+    throw MatchException('Error al obtener períodos (${response.statusCode}).');
+  }
+
+  @override
+  Future<MatchPeriod> postMatchPeriod({
+    required String idToken,
+    required String matchId,
+    required String periodLabel,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_kApiBase/admin/match-periods'),
+      headers: {
+        'Authorization': 'Bearer $idToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'matchId': matchId, 'periodLabel': periodLabel}),
+    );
+    if (response.statusCode == 201) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return MatchPeriod(
         id: data['id'] as String,
         periodLabel: data['periodLabel'] as String,
-        startTime: DateTime.parse('${data['startTime'] as String}Z').toLocal(),
+        startTime:
+            DateTime.parse('${data['startTime'] as String}Z').toLocal(),
       );
     }
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'Conflicto al iniciar período.');
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para iniciar períodos.');
+    }
+    throw MatchException('Error al iniciar período (${response.statusCode}).');
+  }
 
-    if (response.statusCode == 404) return null;
+  @override
+  Future<void> endMatchPeriod({
+    required String idToken,
+    required String periodId,
+  }) async {
+    final response = await _client.put(
+      Uri.parse('$_kApiBase/admin/match-periods/$periodId'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+    if (response.statusCode == 200) return;
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'El período ya está cerrado.');
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para cerrar períodos.');
+    }
+    throw MatchException('Error al cerrar período (${response.statusCode}).');
+  }
 
-    throw MatchException('Error al obtener período (${response.statusCode}).');
+  @override
+  Future<void> finishMatch({
+    required String idToken,
+    required String matchId,
+  }) async {
+    final response = await _client.patch(
+      Uri.parse('$_kApiBase/admin/matches/$matchId/finish'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+    if (response.statusCode == 200) return;
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'El partido no está en progreso.');
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para finalizar el partido.');
+    }
+    throw MatchException('Error al finalizar el partido (${response.statusCode}).');
   }
 
   @override

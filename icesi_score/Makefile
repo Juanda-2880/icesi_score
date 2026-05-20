@@ -1,4 +1,4 @@
-.PHONY: db-up db-migrate db-seed db-connect db-down venv superadmin-seed lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build
+.PHONY: db-up db-migrate db-seed db-connect db-down venv superadmin-seed lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build post-match-period-build put-match-period-build patch-match-finish-build
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -282,9 +282,54 @@ ws-broadcaster-build: venv
 	 echo "✓ Paquete Lambda listo en $$PKG"
 
 # ---------------------------------------------------------------------------
+# post-match-period-build — empaqueta post_match_period con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+post-match-period-build: venv
+	@PKG="backend/post_match_period/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/post_match_period/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
+# put-match-period-build — empaqueta put_match_period con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+put-match-period-build: venv
+	@PKG="backend/put_match_period/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/put_match_period/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
+# patch-match-finish-build — empaqueta patch_match_finish con psycopg2 para Linux x86_64
+# ---------------------------------------------------------------------------
+patch-match-finish-build: venv
+	@PKG="backend/patch_match_finish/package" && \
+	 rm -rf "$$PKG" && \
+	 $(PIP) install psycopg2-binary \
+	   --target "$$PKG" \
+	   --platform manylinux2014_x86_64 \
+	   --python-version 3.11 \
+	   --only-binary=:all: \
+	   --quiet && \
+	 cp backend/patch_match_finish/lambda_function.py "$$PKG/" && \
+	 echo "✓ Paquete Lambda listo en $$PKG"
+
+# ---------------------------------------------------------------------------
 # db-up — abre acceso público temporal desde la IP del desarrollador
 # ---------------------------------------------------------------------------
-db-up: lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build
+db-up: lambda-build profile-build update-profile-build delete-user-build create-admin-user-build get-teams-build get-leagues-build create-match-build get-matches-build update-match-build delete-match-build get-soccer-events-build get-match-periods-build get-volleyball-data-build get-match-lineup-build post-soccer-event-build ws-broadcaster-build post-match-period-build put-match-period-build patch-match-finish-build
 	@echo "Obteniendo IP pública…"
 	@MY_IP=$$(curl -s https://ifconfig.me) && \
 	 echo "IP detectada: $$MY_IP" && \
