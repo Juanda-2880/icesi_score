@@ -1,6 +1,8 @@
 # Tareas de Contribucion - Equipo IcesiScore
 
-Cada tarea mejora algo concreto del MVP y puede completarse en pocos commits. No requieren credenciales AWS (IAM). Para probar la app basta con `flutter run` desde `icesi_score/`.
+Cada tarea mejora algo concreto del MVP y puede completarse en pocos commits.
+
+> **Importante:** El archivo `lib/amplifyconfiguration.dart` esta en el `.gitignore` y no esta incluido en el repositorio. Este archivo contiene las credenciales de AWS Cognito y API Gateway y se genera automaticamente con Terraform al desplegar la infraestructura. Como no tienen un usuario IAM no pueden generarlo ni ejecutar `flutter run`. Para verificar sus cambios usen `flutter analyze` desde la carpeta `icesi_score/`, que compila el proyecto y reporta errores de tipos, imports rotos y violaciones de arquitectura sin necesitar conectarse a ningun servicio. Si no reporta errores, el codigo es correcto. El lider del equipo verificara el comportamiento visual antes de aprobar el PR.
 
 **Flujo de trabajo:**
 
