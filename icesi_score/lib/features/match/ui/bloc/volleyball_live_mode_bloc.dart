@@ -33,6 +33,7 @@ class VolleyballLiveModeBloc
     on<StartSetEvent>(_onStartSet);
     on<VolleyballEventSubmittedEvent>(_onEventSubmitted);
     on<RotateTeamEvent>(_onRotateTeam);
+    on<VolleyballLiveModeWsEventReceivedEvent>(_onWsEvent);
   }
 
   Future<void> _onStarted(
@@ -199,6 +200,61 @@ class VolleyballLiveModeBloc
       emit(const VolleyballLiveModeSubmitErrorState('Error al rotar el equipo.'));
       emit(current.copyWith(isSubmitting: false));
     }
+  }
+
+  Future<void> _onWsEvent(
+    VolleyballLiveModeWsEventReceivedEvent event,
+    Emitter<VolleyballLiveModeState> emit,
+  ) async {
+    final current = state;
+    if (current is! VolleyballLiveModeLoadedState) return;
+    try {
+      final (:sets, :events) = await _getVolleyballData(_currentMatch!.id);
+      final activeSet = sets.where((s) => s.isActive).firstOrNull;
+      final closedSets = sets.where((s) => !s.isActive).toList();
+
+      var newLineup = List<LineupPlayer>.from(current.lineup);
+      final eventData = event.wsMessage['event'] as Map<String, dynamic>?;
+      if (eventData != null && eventData['eventType'] == 'SUBSTITUTION') {
+        final outId = eventData['mainPlayerId'] as String?;
+        final inId  = eventData['secondaryPlayerId'] as String?;
+        if (outId != null && inId != null) {
+          final outIdx = newLineup.indexWhere((p) => p.playerId == outId);
+          final inIdx  = newLineup.indexWhere((p) => p.playerId == inId);
+          if (outIdx >= 0 && inIdx >= 0) {
+            final outCoord = newLineup[outIdx].positionCoordinate;
+            newLineup[outIdx] = newLineup[outIdx].copyWith(status: 'ON_BENCH');
+            newLineup[inIdx]  = newLineup[inIdx].copyWith(
+              status: 'ON_FIELD',
+              positionCoordinate: outCoord,
+            );
+          }
+        }
+      }
+
+      final matchScore = event.wsMessage['matchScore'] as Map<String, dynamic>?;
+      var updatedMatch = current.match;
+      if (matchScore != null) {
+        updatedMatch = updatedMatch.copyWith(
+          homeScore: (matchScore['homeSets'] as int?) ?? current.match.homeScore,
+          awayScore: (matchScore['awaySets'] as int?) ?? current.match.awayScore,
+        );
+      }
+      if (event.wsMessage['matchFinished'] == true) {
+        updatedMatch = updatedMatch.copyWith(status: 'FINISHED');
+        _currentMatch = updatedMatch;
+      }
+
+      emit(current.copyWith(
+        match: updatedMatch,
+        lineup: newLineup,
+        activeSet: activeSet,
+        closedSets: closedSets,
+        recentEvents: events,
+        clearActiveSet: activeSet == null,
+        isSubmitting: false,
+      ));
+    } catch (_) {}
   }
 
   static String _successMessage(String eventType) {

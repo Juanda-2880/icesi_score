@@ -33,3 +33,8 @@ class RotateTeamEvent extends VolleyballLiveModeEvent {
   final String teamId;
   const RotateTeamEvent(this.teamId);
 }
+
+class VolleyballLiveModeWsEventReceivedEvent extends VolleyballLiveModeEvent {
+  final Map<String, dynamic> wsMessage;
+  const VolleyballLiveModeWsEventReceivedEvent(this.wsMessage);
+}
