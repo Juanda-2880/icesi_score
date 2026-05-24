@@ -81,19 +81,23 @@ class IcesiScoreApp extends StatefulWidget {
 
 class _IcesiScoreAppState extends State<IcesiScoreApp> {
   late final Future<AuthUser?> _sessionFuture;
+  late final CognitoAuthDataSource _cognitoSource;
+  late final AuthRepositoryImpl _authRepo;
+  late final MatchRepositoryImpl _matchRepo;
 
   @override
   void initState() {
     super.initState();
+    _cognitoSource = CognitoAuthDataSource();
+    _authRepo = AuthRepositoryImpl(_cognitoSource);
+    _matchRepo = MatchRepositoryImpl(_cognitoSource);
     _sessionFuture = _initApp();
   }
 
   Future<AuthUser?> _initApp() async {
     await Amplify.addPlugin(AmplifyAuthCognito());
     await Amplify.configure(amplifyconfig);
-    return GetStoredSessionUseCase(
-      AuthRepositoryImpl(CognitoAuthDataSource()),
-    )();
+    return GetStoredSessionUseCase(_authRepo)();
   }
 
   @override
@@ -108,21 +112,19 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
           '/welcome': (_) => const WelcomeScreen(),
           '/login': (_) => BlocProvider<LoginBloc>(
                 create: (_) => LoginBloc(
-                  SignInUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+                  SignInUseCase(_authRepo),
                 ),
                 child: const LoginScreen(),
               ),
           '/register': (_) => BlocProvider<RegisterBloc>(
                 create: (_) => RegisterBloc(
-                  SignUpUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
+                  SignUpUseCase(_authRepo),
                 ),
                 child: const RegisterScreen(),
               ),
           '/verify': (_) => BlocProvider<VerifyBloc>(
                 create: (_) => VerifyBloc(
-                  ConfirmSignUpUseCase(
-                    AuthRepositoryImpl(CognitoAuthDataSource()),
-                  ),
+                  ConfirmSignUpUseCase(_authRepo),
                 ),
                 child: const VerifyScreen(),
               ),
@@ -132,8 +134,7 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
           },
           '/home': (ctx) {
             final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
-            final matchRepo = MatchRepositoryImpl(CognitoAuthDataSource());
-            final getMatches = GetMatchesUseCase(matchRepo);
+            final getMatches = GetMatchesUseCase(_matchRepo);
             return MultiBlocProvider(
               providers: [
                 BlocProvider<FootballFeedBloc>(
@@ -150,21 +151,16 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
           },
           '/set-password': (_) => BlocProvider(
                 create: (_) => SetPasswordBloc(
-                  ConfirmNewPasswordUseCase(
-                    AuthRepositoryImpl(CognitoAuthDataSource()),
-                  ),
+                  ConfirmNewPasswordUseCase(_authRepo),
                 ),
                 child: const SetNewPasswordScreen(),
               ),
           '/admin': (_) {
-            final matchRepo = MatchRepositoryImpl(CognitoAuthDataSource());
-            final getMatches = GetMatchesUseCase(matchRepo);
+            final getMatches = GetMatchesUseCase(_matchRepo);
             return MultiBlocProvider(
               providers: [
                 BlocProvider(
-                  create: (_) => LogoutBloc(
-                    SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
-                  ),
+                  create: (_) => LogoutBloc(SignOutUseCase(_authRepo)),
                 ),
                 BlocProvider<FootballFeedBloc>(
                   create: (_) => FootballFeedBloc(getMatches)
@@ -175,100 +171,85 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
                     ..add(const MatchFeedStartedEvent()),
                 ),
                 BlocProvider<CreateMatchBloc>(
-                  create: (_) {
-                    final repo = MatchRepositoryImpl(CognitoAuthDataSource());
-                    return CreateMatchBloc(
-                      GetTeamsUseCase(repo),
-                      GetLeaguesUseCase(repo),
-                      CreateMatchUseCase(repo),
-                      UpdateMatchUseCase(repo),
-                      DeleteMatchUseCase(repo),
-                    );
-                  },
+                  create: (_) => CreateMatchBloc(
+                    GetTeamsUseCase(_matchRepo),
+                    GetLeaguesUseCase(_matchRepo),
+                    CreateMatchUseCase(_matchRepo),
+                    UpdateMatchUseCase(_matchRepo),
+                    DeleteMatchUseCase(_matchRepo),
+                  ),
                 ),
               ],
               child: const AdminDashboardScreen(),
             );
           },
           '/superadmin': (_) => BlocProvider(
-                create: (_) => LogoutBloc(
-                  SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
-                ),
+                create: (_) => LogoutBloc(SignOutUseCase(_authRepo)),
                 child: const AdminDashboardScreen(),
               ),
           '/create-match': (ctx) {
             final initialMatch =
                 ModalRoute.of(ctx)?.settings.arguments as Match?;
-            final repo = MatchRepositoryImpl(CognitoAuthDataSource());
             return BlocProvider<CreateMatchBloc>(
               create: (_) => CreateMatchBloc(
-                GetTeamsUseCase(repo),
-                GetLeaguesUseCase(repo),
-                CreateMatchUseCase(repo),
-                UpdateMatchUseCase(repo),
-                DeleteMatchUseCase(repo),
+                GetTeamsUseCase(_matchRepo),
+                GetLeaguesUseCase(_matchRepo),
+                CreateMatchUseCase(_matchRepo),
+                UpdateMatchUseCase(_matchRepo),
+                DeleteMatchUseCase(_matchRepo),
               ),
               child: CreateMatchScreen(initialMatch: initialMatch),
             );
           },
           '/create-admin': (_) => BlocProvider<CreateAdminBloc>(
                 create: (_) => CreateAdminBloc(
-                  CreateAdminUseCase(
-                    AuthRepositoryImpl(CognitoAuthDataSource()),
-                  ),
+                  CreateAdminUseCase(_authRepo),
                 ),
                 child: const CreateAdminScreen(),
               ),
           '/match-detail': (ctx) {
-            final match =
-                ModalRoute.of(ctx)!.settings.arguments as Match;
-            final repo = MatchRepositoryImpl(CognitoAuthDataSource());
+            final match = ModalRoute.of(ctx)!.settings.arguments as Match;
             return BlocProvider<MatchDetailBloc>(
               create: (_) => MatchDetailBloc(
-                GetSoccerEventsUseCase(repo),
-                GetMatchPeriodUseCase(repo),
+                GetSoccerEventsUseCase(_matchRepo),
+                GetMatchPeriodUseCase(_matchRepo),
               ),
               child: MatchDetailScreen(match: match),
             );
           },
           '/volleyball-detail': (ctx) {
             final match = ModalRoute.of(ctx)!.settings.arguments as Match;
-            final repo = MatchRepositoryImpl(CognitoAuthDataSource());
             return BlocProvider<VolleyballDetailBloc>(
               create: (_) => VolleyballDetailBloc(
-                GetVolleyballDataUseCase(repo),
+                GetVolleyballDataUseCase(_matchRepo),
               ),
               child: VolleyballDetailScreen(match: match),
             );
           },
           '/live-mode': (ctx) {
-            final match =
-                ModalRoute.of(ctx)!.settings.arguments as Match;
-            final repo = MatchRepositoryImpl(CognitoAuthDataSource());
+            final match = ModalRoute.of(ctx)!.settings.arguments as Match;
             return BlocProvider<LiveModeBloc>(
               create: (_) => LiveModeBloc(
-                GetMatchLineupUseCase(repo),
-                PostSoccerEventUseCase(repo),
-                GetSoccerEventsUseCase(repo),
-                GetMatchPeriodsUseCase(repo),
-                PostMatchPeriodUseCase(repo),
-                EndMatchPeriodUseCase(repo),
-                FinishMatchUseCase(repo),
+                GetMatchLineupUseCase(_matchRepo),
+                PostSoccerEventUseCase(_matchRepo),
+                GetSoccerEventsUseCase(_matchRepo),
+                GetMatchPeriodsUseCase(_matchRepo),
+                PostMatchPeriodUseCase(_matchRepo),
+                EndMatchPeriodUseCase(_matchRepo),
+                FinishMatchUseCase(_matchRepo),
               ),
               child: LiveModeScreen(match: match),
             );
           },
           '/volleyball-live-mode': (ctx) {
-            final match =
-                ModalRoute.of(ctx)!.settings.arguments as Match;
-            final repo = MatchRepositoryImpl(CognitoAuthDataSource());
+            final match = ModalRoute.of(ctx)!.settings.arguments as Match;
             return BlocProvider<VolleyballLiveModeBloc>(
               create: (_) => VolleyballLiveModeBloc(
-                GetMatchLineupUseCase(repo),
-                GetVolleyballDataUseCase(repo),
-                PostVolleyballSetUseCase(repo),
-                PostVolleyballEventUseCase(repo),
-                RotateTeamUseCase(repo),
+                GetMatchLineupUseCase(_matchRepo),
+                GetVolleyballDataUseCase(_matchRepo),
+                PostVolleyballSetUseCase(_matchRepo),
+                PostVolleyballEventUseCase(_matchRepo),
+                RotateTeamUseCase(_matchRepo),
               ),
               child: VolleyballLiveModeScreen(match: match),
             );
@@ -278,23 +259,17 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
             return MultiBlocProvider(
               providers: [
                 BlocProvider(
-                  create: (_) => LogoutBloc(
-                    SignOutUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
-                  ),
+                  create: (_) => LogoutBloc(SignOutUseCase(_authRepo)),
                 ),
                 BlocProvider(
                   create: (_) => ProfileBloc(
-                    UpdateProfileUseCase(
-                      AuthRepositoryImpl(CognitoAuthDataSource()),
-                    ),
+                    UpdateProfileUseCase(_authRepo),
                     userId,
                   ),
                 ),
                 BlocProvider(
                   create: (_) => DeleteBloc(
-                    DeleteAccountUseCase(
-                      AuthRepositoryImpl(CognitoAuthDataSource()),
-                    ),
+                    DeleteAccountUseCase(_authRepo),
                     userId,
                   ),
                 ),
