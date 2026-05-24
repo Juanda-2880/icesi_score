@@ -31,8 +31,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (match.sport == 'VOLLEYBALL') {
-      Navigator.pushNamed(context, '/volleyball-detail', arguments: match)
-          .then(reloadFeeds);
+      Navigator.pushNamed(
+        context,
+        '/volleyball-detail',
+        arguments: match,
+      ).then(reloadFeeds);
       return;
     }
     final role = context.read<SessionCubit>().state?.role ?? '';
@@ -60,8 +63,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 100),
                   child: Center(
-                    child: Text(state.message,
-                        style: const TextStyle(color: Colors.grey)),
+                    child: Text(
+                      state.message,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
                   ),
                 ),
               ],
@@ -94,6 +99,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 '/profile',
                 arguments: widget.user,
               ),
+              onSearchChanged: (query) {
+                context.read<FootballFeedBloc>().add(
+                  MatchFeedSearchChangedEvent(query),
+                );
+                context.read<VolleyballFeedBloc>().add(
+                  MatchFeedSearchChangedEvent(query),
+                );
+              },
             ),
             SportSelector(
               selectedIndex: _selectedSport,
