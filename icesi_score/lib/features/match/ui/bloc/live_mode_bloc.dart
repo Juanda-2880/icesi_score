@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/lineup_player.dart';
 import '../../domain/entities/match.dart';
@@ -35,7 +36,7 @@ class LiveModeBloc extends Bloc<LiveModeEvent, LiveModeState> {
   ) : super(const LiveModeLoadingState()) {
     on<LiveModeStartedEvent>(_onStarted);
     on<LiveModeEventSubmittedEvent>(_onEventSubmitted);
-    on<LiveModeWsEventReceivedEvent>(_onWsEvent);
+    on<LiveModeWsEventReceivedEvent>(_onWsEvent, transformer: sequential());
     on<StartPeriodEvent>(_onStartPeriod);
     on<EndPeriodEvent>(_onEndPeriod);
     on<FinishMatchEvent>(_onFinishMatch);
@@ -128,17 +129,108 @@ class LiveModeBloc extends Bloc<LiveModeEvent, LiveModeState> {
     }
   }
 
-  void _onWsEvent(
+  Future<void> _onWsEvent(
     LiveModeWsEventReceivedEvent event,
     Emitter<LiveModeState> emit,
-  ) {
+  ) async {
     final current = state;
     if (current is! LiveModeLoadedState) return;
+
+    int homeScore = current.homeScore;
+    int awayScore = current.awayScore;
     final newScore = event.wsMessage['newScore'] as Map<String, dynamic>?;
     if (newScore != null) {
+      homeScore = (newScore['homeScore'] as int?) ?? current.homeScore;
+      awayScore = (newScore['awayScore'] as int?) ?? current.awayScore;
+    }
+
+    final eventData = event.wsMessage['event'] as Map<String, dynamic>?;
+    var newLineup = List<LineupPlayer>.from(current.lineup);
+    if (eventData != null) {
+      final eventType = eventData['eventType'] as String?;
+      if (eventType == 'SUBSTITUTION') {
+        final outId = eventData['mainPlayerId'] as String?;
+        final inId  = eventData['secondaryPlayerId'] as String?;
+        if (outId != null && inId != null) {
+          final outIdx = newLineup.indexWhere((p) => p.playerId == outId);
+          final inIdx  = newLineup.indexWhere((p) => p.playerId == inId);
+          if (outIdx >= 0 && inIdx >= 0) {
+            // Swap list positions — field widget uses index, not coordinate.
+            final playerOut = newLineup[outIdx].copyWith(status: 'ON_BENCH');
+            final playerIn  = newLineup[inIdx].copyWith(status: 'ON_FIELD');
+            newLineup[outIdx] = playerIn;
+            newLineup[inIdx]  = playerOut;
+          }
+        }
+      } else if (eventType == 'RED_CARD') {
+        final expelledId = eventData['mainPlayerId'] as String?;
+        if (expelledId != null) {
+          newLineup = newLineup
+              .map((p) => p.playerId == expelledId
+                  ? p.copyWith(status: 'EXPELLED')
+                  : p)
+              .toList();
+        }
+      }
+    }
+
+    final msgType = event.wsMessage['type'] as String?;
+
+    if (msgType == 'CLOCK_UPDATE') {
+      final action = event.wsMessage['action'] as String?;
+
+      if (action == 'START') {
+        final newPeriod = MatchPeriod(
+          id: event.wsMessage['periodId'] as String? ?? '',
+          periodLabel: event.wsMessage['periodLabel'] as String? ?? '',
+          startTime: DateTime.now(),
+        );
+        emit(current.copyWith(activePeriod: newPeriod, isSubmitting: false));
+        return;
+      }
+
+      if (action == 'END') {
+        final endedLabel = event.wsMessage['periodLabel'] as String?;
+        final updated = List<String>.from(current.closedPeriodLabels);
+        if (endedLabel != null && !updated.contains(endedLabel)) {
+          updated.add(endedLabel);
+        }
+        emit(current.copyWith(
+          clearActivePeriod: true,
+          closedPeriodLabels: updated,
+          isSubmitting: false,
+        ));
+        return;
+      }
+
+      if (action == 'FINISH') {
+        final updatedMatch = current.match.copyWith(status: 'FINISHED');
+        emit(current.copyWith(
+          match: updatedMatch,
+          clearActivePeriod: true,
+          isSubmitting: false,
+        ));
+        return;
+      }
+    }
+
+    try {
+      // One extra HTTP call per external WS event — known limitation when
+      // two admins operate the same match simultaneously.
+      final refreshedEvents = await _getEvents(_currentMatch!.id);
       emit(current.copyWith(
-        homeScore: (newScore['homeScore'] as int?) ?? current.homeScore,
-        awayScore: (newScore['awayScore'] as int?) ?? current.awayScore,
+        homeScore: homeScore,
+        awayScore: awayScore,
+        events: refreshedEvents,
+        lineup: newLineup,
+        isSubmitting: false,
+      ));
+    } catch (_) {
+      emit(current.copyWith(
+        homeScore: homeScore,
+        awayScore: awayScore,
+        lineup: newLineup,
+        isSubmitting: false,
       ));
     }
   }

@@ -243,31 +243,40 @@ def lambda_handler(event, context):
                 """
                 INSERT INTO volleyball_event
                   (id, set_id, id_admin_registry, event_type, main_player_id,
-                   secondary_player_id, id_team, score_moment)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                   secondary_player_id, id_team, score_moment, note)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (event_id, set_id, cognito_sub, event_type, main_player_id,
-                 secondary_id, team_id, score_moment),
+                 secondary_id, team_id, score_moment, note),
             )
 
         conn.commit()
 
-        # Fetch player name for the response
+        # Fetch main and secondary player names for the response
         player_name = None
-        if main_player_id:
-            with conn.cursor() as cur:
+        secondary_player_name = None
+        with conn.cursor() as cur:
+            if main_player_id:
                 cur.execute("SELECT full_name FROM player WHERE id = %s", (main_player_id,))
                 name_row = cur.fetchone()
                 player_name = name_row[0] if name_row else None
+            if secondary_id:
+                cur.execute("SELECT full_name FROM player WHERE id = %s", (secondary_id,))
+                sec_row = cur.fetchone()
+                secondary_player_name = sec_row[0] if sec_row else None
 
         event_payload = {
             "id": event_id,
             "setId": set_id,
             "setNumber": set_number,
             "eventType": event_type,
+            "mainPlayerId": main_player_id,
+            "secondaryPlayerId": secondary_id,
             "playerName": player_name,
+            "secondaryPlayerName": secondary_player_name,
             "teamId": team_id,
             "scoreMoment": score_moment,
+            "note": note,
         }
 
         if SNS_BROADCAST_ARN:

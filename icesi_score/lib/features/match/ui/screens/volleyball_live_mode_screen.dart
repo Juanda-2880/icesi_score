@@ -1,6 +1,12 @@
+import 'dart:convert';
+
+import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
+import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../../../amplifyconfiguration.dart' show wsBaseUrl;
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/team_avatar.dart';
 import '../../../../widgets/match/team_helpers.dart';
@@ -24,17 +30,54 @@ class VolleyballLiveModeScreen extends StatefulWidget {
 }
 
 class _VolleyballLiveModeScreenState extends State<VolleyballLiveModeScreen> {
+  WebSocketChannel? _channel;
+
   @override
   void initState() {
     super.initState();
     context
         .read<VolleyballLiveModeBloc>()
         .add(VolleyballLiveModeStartedEvent(widget.match));
+    if (widget.match.status == 'IN_PROGRESS') (() async => await _connectWs())();
+  }
+
+  Future<void> _connectWs() async {
+    try {
+      final session =
+          await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
+      final idToken = session.userPoolTokensResult.value.idToken.raw;
+      final wsUrl = '$wsBaseUrl?token=$idToken&match_id=${widget.match.id}';
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      _channel!.stream.listen(
+        (raw) {
+          if (!mounted) return;
+          try {
+            final msg = jsonDecode(raw as String) as Map<String, dynamic>;
+            if (msg['type'] == 'VOLLEYBALL_EVENT') {
+              context
+                  .read<VolleyballLiveModeBloc>()
+                  .add(VolleyballLiveModeWsEventReceivedEvent(msg));
+            }
+          } catch (_) {}
+        },
+        onError: (_) {},
+        cancelOnError: false,
+      );
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _channel?.sink.close();
+    super.dispose();
   }
 
   void _onPlayerTap(
       BuildContext context, LineupPlayer player, VolleyballLiveModeLoadedState state) {
     final isBench = player.status == 'ON_BENCH';
+    // A bench player who was previously on-field retains a non-null positionCoordinate.
+    // Original bench players always have positionCoordinate == null.
+    final wasSubstitutedOut = isBench && player.positionCoordinate != null;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.cardSurface,
@@ -44,6 +87,7 @@ class _VolleyballLiveModeScreenState extends State<VolleyballLiveModeScreen> {
       builder: (_) => VolleyballEventBottomSheet(
         player: player,
         isBenchPlayer: isBench,
+        wasSubstitutedOut: wasSubstitutedOut,
         isHome: player.teamId == widget.match.homeTeamId,
         onEventSelected: (eventType) =>
             _onEventSelected(context, eventType, player, state,
@@ -103,9 +147,12 @@ class _VolleyballLiveModeScreenState extends State<VolleyballLiveModeScreen> {
             },
           );
         } else {
+          // Exclude players who have already been substituted out (non-null positionCoordinate)
           final benchPlayers = state.lineup
               .where((p) =>
-                  p.teamId == player.teamId && p.status == 'ON_BENCH')
+                  p.teamId == player.teamId &&
+                  p.status == 'ON_BENCH' &&
+                  p.positionCoordinate == null)
               .toList();
           VolleyballSubstitutionDialog.show(
             context,

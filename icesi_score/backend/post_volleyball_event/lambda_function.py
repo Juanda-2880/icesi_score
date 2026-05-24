@@ -270,6 +270,8 @@ def lambda_handler(event, context):
             "setId": set_id,
             "setNumber": set_number,
             "eventType": event_type,
+            "mainPlayerId": main_player_id,
+            "secondaryPlayerId": secondary_id,
             "playerName": player_name,
             "secondaryPlayerName": secondary_player_name,
             "teamId": team_id,

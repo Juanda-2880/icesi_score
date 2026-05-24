@@ -12,6 +12,7 @@ import '../../domain/entities/lineup_player.dart';
 class VolleyballEventBottomSheet extends StatelessWidget {
   final LineupPlayer player;
   final bool isBenchPlayer;
+  final bool wasSubstitutedOut;
   final bool isHome;
   final void Function(String eventType) onEventSelected;
 
@@ -19,6 +20,7 @@ class VolleyballEventBottomSheet extends StatelessWidget {
     super.key,
     required this.player,
     required this.isBenchPlayer,
+    this.wasSubstitutedOut = false,
     required this.isHome,
     required this.onEventSelected,
   });
@@ -37,6 +39,7 @@ class VolleyballEventBottomSheet extends StatelessWidget {
         'NOTE', 'Agregar Nota', Icons.note_add, Color(0xFF607D8B)),
   ];
 
+  // Original bench players: can be substituted in
   static const _benchEvents = [
     _VbEventOption(
         'SUBSTITUTION', 'Sustitución', Icons.swap_horiz, Color(0xFF9C27B0)),
@@ -44,10 +47,18 @@ class VolleyballEventBottomSheet extends StatelessWidget {
         'NOTE', 'Agregar Nota', Icons.note_add, Color(0xFF607D8B)),
   ];
 
+  // Players who already left the field cannot re-enter
+  static const _substitutedOutEvents = [
+    _VbEventOption(
+        'NOTE', 'Agregar Nota', Icons.note_add, Color(0xFF607D8B)),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final teamColor = isHome ? AppTheme.teamColorA : AppTheme.teamColorB;
-    final events = isBenchPlayer ? _benchEvents : _fieldEvents;
+    final events = isBenchPlayer
+        ? (wasSubstitutedOut ? _substitutedOutEvents : _benchEvents)
+        : _fieldEvents;
 
     return SafeArea(
       child: Column(

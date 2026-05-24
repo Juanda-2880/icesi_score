@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
+import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -35,23 +37,28 @@ class _LiveModeScreenState extends State<LiveModeScreen> {
     context
         .read<LiveModeBloc>()
         .add(LiveModeStartedEvent(widget.match));
-    _connectWs();
+    (() async => await _connectWs())();
   }
 
-  void _connectWs() {
+  Future<void> _connectWs() async {
     try {
-      _channel = WebSocketChannel.connect(
-        Uri.parse('$wsBaseUrl?match_id=${widget.match.id}'),
-      );
+      final session =
+          await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
+      final idToken = session.userPoolTokensResult.value.idToken.raw;
+      final wsUrl = '$wsBaseUrl?token=$idToken&match_id=${widget.match.id}';
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       _channel!.stream.listen(
         (raw) {
-          final msg = jsonDecode(raw as String) as Map<String, dynamic>;
           if (!mounted) return;
-          if (msg['type'] == 'SOCCER_EVENT') {
-            context
-                .read<LiveModeBloc>()
-                .add(LiveModeWsEventReceivedEvent(msg));
-          }
+          try {
+            final msg = jsonDecode(raw as String) as Map<String, dynamic>;
+            if (msg['type'] == 'SOCCER_EVENT' ||
+                msg['type'] == 'CLOCK_UPDATE') {
+              context
+                  .read<LiveModeBloc>()
+                  .add(LiveModeWsEventReceivedEvent(msg));
+            }
+          } catch (_) {}
         },
         onError: (_) {},
         cancelOnError: false,
