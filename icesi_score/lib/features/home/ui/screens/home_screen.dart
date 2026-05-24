@@ -6,6 +6,7 @@ import '../../../match/ui/bloc/match_feed_bloc.dart';
 import '../../../match/ui/bloc/match_feed_event.dart';
 import '../../../match/ui/bloc/match_feed_state.dart';
 import '../../../session/session_cubit.dart';
+import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/app_top_bar.dart';
 import '../../../../widgets/match/match_feed_list.dart';
 import '../../../../widgets/match/sport_selector.dart';
@@ -21,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedSport = 0;
+  String? _selectedStatus;
 
   void _onMatchTap(BuildContext context, Match match) {
     final footballBloc = context.read<FootballFeedBloc>();
@@ -46,6 +48,52 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _refresh<B extends MatchFeedBloc>(BuildContext ctx) async {
     ctx.read<B>().add(const MatchFeedStartedEvent());
     await ctx.read<B>().stream.firstWhere((s) => s is! MatchFeedLoadingState);
+  }
+
+  void _onStatusFilterChanged(String? status) {
+    setState(() => _selectedStatus = status);
+    context.read<FootballFeedBloc>().add(
+      MatchFeedStatusFilterChangedEvent(status),
+    );
+    context.read<VolleyballFeedBloc>().add(
+      MatchFeedStatusFilterChangedEvent(status),
+    );
+  }
+
+  Widget _buildStatusFilterChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          _buildStatusChip(label: 'Todos', status: null),
+          _buildStatusChip(label: 'En vivo', status: 'IN_PROGRESS'),
+          _buildStatusChip(label: 'Programados', status: 'SCHEDULED'),
+          _buildStatusChip(label: 'Terminados', status: 'FINISHED'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip({required String label, required String? status}) {
+    final selected = _selectedStatus == status;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        selectedColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.surfaceColor,
+        showCheckmark: false,
+        labelStyle: TextStyle(
+          color: selected ? Colors.white : AppTheme.subtitleColor,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+        ),
+        side: BorderSide.none,
+        onSelected: (_) => _onStatusFilterChanged(status),
+      ),
+    );
   }
 
   Widget _buildFeedState<B extends MatchFeedBloc>(BuildContext context) {
@@ -112,6 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedIndex: _selectedSport,
               onSelected: (i) => setState(() => _selectedSport = i),
             ),
+            _buildStatusFilterChips(),
             Expanded(
               child: IndexedStack(
                 index: _selectedSport,
