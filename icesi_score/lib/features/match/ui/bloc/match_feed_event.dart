@@ -11,3 +11,9 @@ class MatchFeedSearchChangedEvent extends MatchFeedEvent {
 
   const MatchFeedSearchChangedEvent(this.query);
 }
+
+class MatchFeedStatusFilterChangedEvent extends MatchFeedEvent {
+  final String? status;
+
+  const MatchFeedStatusFilterChangedEvent(this.status);
+}

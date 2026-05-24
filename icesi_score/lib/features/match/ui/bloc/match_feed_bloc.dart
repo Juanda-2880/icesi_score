@@ -9,11 +9,14 @@ class MatchFeedBloc extends Bloc<MatchFeedEvent, MatchFeedState> {
   final GetMatchesUseCase _getMatches;
   final String _sport;
   List<Match> _allMatches = [];
+  String _activeSearchQuery = '';
+  String? _activeStatusFilter;
 
   MatchFeedBloc(this._getMatches, this._sport)
     : super(const MatchFeedLoadingState()) {
     on<MatchFeedStartedEvent>(_onStarted);
     on<MatchFeedSearchChangedEvent>(_onSearchChanged);
+    on<MatchFeedStatusFilterChangedEvent>(_onStatusFilterChanged);
   }
 
   Future<void> _onStarted(
@@ -24,7 +27,7 @@ class MatchFeedBloc extends Bloc<MatchFeedEvent, MatchFeedState> {
     try {
       final matches = await _getMatches(_sport);
       _allMatches = matches;
-      emit(MatchFeedLoadedState(matches));
+      emit(MatchFeedLoadedState(_applyActiveFilters()));
     } on MatchException catch (e) {
       emit(MatchFeedErrorState(e.message));
     } on Exception {
@@ -36,20 +39,32 @@ class MatchFeedBloc extends Bloc<MatchFeedEvent, MatchFeedState> {
     MatchFeedSearchChangedEvent event,
     Emitter<MatchFeedState> emit,
   ) {
-    final query = event.query.toLowerCase();
+    _activeSearchQuery = event.query.toLowerCase();
+    emit(MatchFeedLoadedState(_applyActiveFilters()));
+  }
 
-    if (query.isEmpty) {
-      emit(MatchFeedLoadedState(_allMatches));
-      return;
-    }
+  void _onStatusFilterChanged(
+    MatchFeedStatusFilterChangedEvent event,
+    Emitter<MatchFeedState> emit,
+  ) {
+    _activeStatusFilter = event.status;
+    emit(MatchFeedLoadedState(_applyActiveFilters()));
+  }
 
-    final filteredMatches = _allMatches.where((match) {
-      return match.homeTeamName.toLowerCase().contains(query) ||
+  List<Match> _applyActiveFilters() {
+    final query = _activeSearchQuery;
+
+    return _allMatches.where((match) {
+      final matchesStatus =
+          _activeStatusFilter == null || match.status == _activeStatusFilter;
+      final matchesSearch =
+          query.isEmpty ||
+          match.homeTeamName.toLowerCase().contains(query) ||
           match.awayTeamName.toLowerCase().contains(query) ||
           match.leagueName.toLowerCase().contains(query);
-    }).toList();
 
-    emit(MatchFeedLoadedState(filteredMatches));
+      return matchesStatus && matchesSearch;
+    }).toList();
   }
 }
 
