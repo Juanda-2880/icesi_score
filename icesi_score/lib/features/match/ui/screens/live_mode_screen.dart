@@ -419,6 +419,7 @@ class _ClockSection extends StatelessWidget {
     final isFinished = state.match.status == 'FINISHED';
     final activePeriod = state.activePeriod;
     final has1TClosed = state.closedPeriodLabels.contains('1T');
+    final label = _buttonLabel(activePeriod, has1TClosed);
 
     return Column(
       children: [
@@ -429,11 +430,12 @@ class _ClockSection extends StatelessWidget {
         const SizedBox(height: 8),
 
         // Clock button
-        if (!isFinished)
+         if (!isFinished)
           _ClockButton(
-            label: _buttonLabel(activePeriod, has1TClosed),
+            label: label,
             onPressed: () => _handleClockAction(context, activePeriod, has1TClosed),
             isLoading: state.isSubmitting,
+            isDestructive: label.startsWith('Finalizar'),
           )
         else
           _ClockButton(
@@ -481,11 +483,13 @@ class _ClockButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final bool isDestructive;
 
   const _ClockButton({
     required this.label,
     required this.onPressed,
     required this.isLoading,
+    this.isDestructive = false,
   });
 
   @override
@@ -506,7 +510,9 @@ class _ClockButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: onPressed == null
               ? Colors.grey.shade700
-              : AppTheme.primaryColor,
+              : isDestructive
+                  ? const Color(0xFFEB5757)
+                  : AppTheme.primaryColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape:
