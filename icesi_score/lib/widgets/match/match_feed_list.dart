@@ -31,9 +31,32 @@ class MatchFeedList extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.only(top: 100),
                 child: Center(
-                  child: Text(
-                    'No hay partidos disponibles',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.event_busy,
+                        size: 72,
+                        color: Colors.white24,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No hay partidos disponibles',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Vuelve pronto para ver los proximos partidos',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
