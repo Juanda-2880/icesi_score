@@ -4,41 +4,14 @@ import 'package:amplify_flutter/amplify_flutter.dart' hide AuthUser;
 import 'package:amplify_auth_cognito/amplify_auth_cognito.dart' hide AuthUser;
 import 'amplifyconfiguration.dart' show amplifyconfig;
 import 'theme/app_theme.dart';
-import 'features/auth/data/repository/auth_repository_impl.dart';
-import 'features/auth/data/source/cognito_auth_data_source.dart';
 import 'features/auth/domain/entities/auth_user.dart';
-import 'features/auth/domain/usecases/confirm_new_password_usecase.dart';
-import 'features/auth/domain/usecases/confirm_sign_up_usecase.dart';
-import 'features/auth/domain/usecases/create_admin_usecase.dart';
-import 'features/auth/domain/usecases/delete_account_usecase.dart';
 import 'features/auth/domain/usecases/get_stored_session_usecase.dart';
-import 'features/auth/domain/usecases/sign_in_usecase.dart';
-import 'features/auth/domain/usecases/sign_out_usecase.dart';
-import 'features/auth/domain/usecases/sign_up_usecase.dart';
 import 'features/auth/domain/usecases/update_profile_usecase.dart';
+import 'features/auth/domain/usecases/delete_account_usecase.dart';
 import 'features/admin/ui/bloc/create_admin_bloc.dart';
 import 'features/admin/ui/screens/admin_dashboard_screen.dart';
 import 'features/admin/ui/screens/create_admin_screen.dart';
-import 'features/match/data/repository/match_repository_impl.dart';
 import 'features/match/domain/entities/match.dart';
-import 'features/match/domain/usecases/create_match_usecase.dart';
-import 'features/match/domain/usecases/delete_match_usecase.dart';
-import 'features/match/domain/usecases/get_leagues_usecase.dart';
-import 'features/match/domain/usecases/end_match_period_usecase.dart';
-import 'features/match/domain/usecases/finish_match_usecase.dart';
-import 'features/match/domain/usecases/get_match_period_usecase.dart';
-import 'features/match/domain/usecases/get_match_periods_usecase.dart';
-import 'features/match/domain/usecases/get_match_lineup_usecase.dart';
-import 'features/match/domain/usecases/post_match_period_usecase.dart';
-import 'features/match/domain/usecases/get_matches_usecase.dart';
-import 'features/match/domain/usecases/get_soccer_events_usecase.dart';
-import 'features/match/domain/usecases/get_teams_usecase.dart';
-import 'features/match/domain/usecases/get_volleyball_data_usecase.dart';
-import 'features/match/domain/usecases/post_soccer_event_usecase.dart';
-import 'features/match/domain/usecases/post_volleyball_event_usecase.dart';
-import 'features/match/domain/usecases/post_volleyball_set_usecase.dart';
-import 'features/match/domain/usecases/rotate_team_usecase.dart';
-import 'features/match/domain/usecases/update_match_usecase.dart';
 import 'features/match/ui/bloc/create_match_bloc.dart';
 import 'features/match/ui/bloc/live_mode_bloc.dart';
 import 'features/match/ui/bloc/match_detail_bloc.dart';
@@ -66,9 +39,11 @@ import 'features/register/ui/screens/register_screen.dart';
 import 'features/session/session_cubit.dart';
 import 'features/verify/ui/bloc/verify_bloc.dart';
 import 'features/verify/ui/screens/verify_screen.dart';
+import 'injection_container.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  initDependencies();
   runApp(const IcesiScoreApp());
 }
 
@@ -81,29 +56,23 @@ class IcesiScoreApp extends StatefulWidget {
 
 class _IcesiScoreAppState extends State<IcesiScoreApp> {
   late final Future<AuthUser?> _sessionFuture;
-  late final CognitoAuthDataSource _cognitoSource;
-  late final AuthRepositoryImpl _authRepo;
-  late final MatchRepositoryImpl _matchRepo;
 
   @override
   void initState() {
     super.initState();
-    _cognitoSource = CognitoAuthDataSource();
-    _authRepo = AuthRepositoryImpl(_cognitoSource);
-    _matchRepo = MatchRepositoryImpl(_cognitoSource);
     _sessionFuture = _initApp();
   }
 
   Future<AuthUser?> _initApp() async {
     await Amplify.addPlugin(AmplifyAuthCognito());
     await Amplify.configure(amplifyconfig);
-    return GetStoredSessionUseCase(_authRepo)();
+    return sl<GetStoredSessionUseCase>()();
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider<SessionCubit>(
-      create: (_) => SessionCubit(),
+      create: (_) => sl<SessionCubit>(),
       child: MaterialApp(
         title: 'IcesiScore',
         debugShowCheckedModeBanner: false,
@@ -111,21 +80,15 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
         routes: {
           '/welcome': (_) => const WelcomeScreen(),
           '/login': (_) => BlocProvider<LoginBloc>(
-                create: (_) => LoginBloc(
-                  SignInUseCase(_authRepo),
-                ),
+                create: (_) => sl<LoginBloc>(),
                 child: const LoginScreen(),
               ),
           '/register': (_) => BlocProvider<RegisterBloc>(
-                create: (_) => RegisterBloc(
-                  SignUpUseCase(_authRepo),
-                ),
+                create: (_) => sl<RegisterBloc>(),
                 child: const RegisterScreen(),
               ),
           '/verify': (_) => BlocProvider<VerifyBloc>(
-                create: (_) => VerifyBloc(
-                  ConfirmSignUpUseCase(_authRepo),
-                ),
+                create: (_) => sl<VerifyBloc>(),
                 child: const VerifyScreen(),
               ),
           '/routing': (ctx) {
@@ -134,123 +97,84 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
           },
           '/home': (ctx) {
             final user = ModalRoute.of(ctx)!.settings.arguments as AuthUser;
-            final getMatches = GetMatchesUseCase(_matchRepo);
             return MultiBlocProvider(
               providers: [
                 BlocProvider<FootballFeedBloc>(
-                  create: (_) => FootballFeedBloc(getMatches)
-                    ..add(const MatchFeedStartedEvent()),
+                  create: (_) =>
+                      sl<FootballFeedBloc>()..add(const MatchFeedStartedEvent()),
                 ),
                 BlocProvider<VolleyballFeedBloc>(
-                  create: (_) => VolleyballFeedBloc(getMatches)
-                    ..add(const MatchFeedStartedEvent()),
+                  create: (_) =>
+                      sl<VolleyballFeedBloc>()..add(const MatchFeedStartedEvent()),
                 ),
               ],
               child: HomeScreen(user: user),
             );
           },
           '/set-password': (_) => BlocProvider(
-                create: (_) => SetPasswordBloc(
-                  ConfirmNewPasswordUseCase(_authRepo),
-                ),
+                create: (_) => sl<SetPasswordBloc>(),
                 child: const SetNewPasswordScreen(),
               ),
-          '/admin': (_) {
-            final getMatches = GetMatchesUseCase(_matchRepo);
-            return MultiBlocProvider(
-              providers: [
-                BlocProvider(
-                  create: (_) => LogoutBloc(SignOutUseCase(_authRepo)),
-                ),
-                BlocProvider<FootballFeedBloc>(
-                  create: (_) => FootballFeedBloc(getMatches)
-                    ..add(const MatchFeedStartedEvent()),
-                ),
-                BlocProvider<VolleyballFeedBloc>(
-                  create: (_) => VolleyballFeedBloc(getMatches)
-                    ..add(const MatchFeedStartedEvent()),
-                ),
-                BlocProvider<CreateMatchBloc>(
-                  create: (_) => CreateMatchBloc(
-                    GetTeamsUseCase(_matchRepo),
-                    GetLeaguesUseCase(_matchRepo),
-                    CreateMatchUseCase(_matchRepo),
-                    UpdateMatchUseCase(_matchRepo),
-                    DeleteMatchUseCase(_matchRepo),
+          '/admin': (_) => MultiBlocProvider(
+                providers: [
+                  BlocProvider(
+                    create: (_) => sl<LogoutBloc>(),
                   ),
-                ),
-              ],
-              child: const AdminDashboardScreen(),
-            );
-          },
+                  BlocProvider<FootballFeedBloc>(
+                    create: (_) =>
+                        sl<FootballFeedBloc>()..add(const MatchFeedStartedEvent()),
+                  ),
+                  BlocProvider<VolleyballFeedBloc>(
+                    create: (_) =>
+                        sl<VolleyballFeedBloc>()..add(const MatchFeedStartedEvent()),
+                  ),
+                  BlocProvider<CreateMatchBloc>(
+                    create: (_) => sl<CreateMatchBloc>(),
+                  ),
+                ],
+                child: const AdminDashboardScreen(),
+              ),
           '/superadmin': (_) => BlocProvider(
-                create: (_) => LogoutBloc(SignOutUseCase(_authRepo)),
+                create: (_) => sl<LogoutBloc>(),
                 child: const AdminDashboardScreen(),
               ),
           '/create-match': (ctx) {
             final initialMatch =
                 ModalRoute.of(ctx)?.settings.arguments as Match?;
             return BlocProvider<CreateMatchBloc>(
-              create: (_) => CreateMatchBloc(
-                GetTeamsUseCase(_matchRepo),
-                GetLeaguesUseCase(_matchRepo),
-                CreateMatchUseCase(_matchRepo),
-                UpdateMatchUseCase(_matchRepo),
-                DeleteMatchUseCase(_matchRepo),
-              ),
+              create: (_) => sl<CreateMatchBloc>(),
               child: CreateMatchScreen(initialMatch: initialMatch),
             );
           },
           '/create-admin': (_) => BlocProvider<CreateAdminBloc>(
-                create: (_) => CreateAdminBloc(
-                  CreateAdminUseCase(_authRepo),
-                ),
+                create: (_) => sl<CreateAdminBloc>(),
                 child: const CreateAdminScreen(),
               ),
           '/match-detail': (ctx) {
             final match = ModalRoute.of(ctx)!.settings.arguments as Match;
             return BlocProvider<MatchDetailBloc>(
-              create: (_) => MatchDetailBloc(
-                GetSoccerEventsUseCase(_matchRepo),
-                GetMatchPeriodUseCase(_matchRepo),
-              ),
+              create: (_) => sl<MatchDetailBloc>(),
               child: MatchDetailScreen(match: match),
             );
           },
           '/volleyball-detail': (ctx) {
             final match = ModalRoute.of(ctx)!.settings.arguments as Match;
             return BlocProvider<VolleyballDetailBloc>(
-              create: (_) => VolleyballDetailBloc(
-                GetVolleyballDataUseCase(_matchRepo),
-              ),
+              create: (_) => sl<VolleyballDetailBloc>(),
               child: VolleyballDetailScreen(match: match),
             );
           },
           '/live-mode': (ctx) {
             final match = ModalRoute.of(ctx)!.settings.arguments as Match;
             return BlocProvider<LiveModeBloc>(
-              create: (_) => LiveModeBloc(
-                GetMatchLineupUseCase(_matchRepo),
-                PostSoccerEventUseCase(_matchRepo),
-                GetSoccerEventsUseCase(_matchRepo),
-                GetMatchPeriodsUseCase(_matchRepo),
-                PostMatchPeriodUseCase(_matchRepo),
-                EndMatchPeriodUseCase(_matchRepo),
-                FinishMatchUseCase(_matchRepo),
-              ),
+              create: (_) => sl<LiveModeBloc>(),
               child: LiveModeScreen(match: match),
             );
           },
           '/volleyball-live-mode': (ctx) {
             final match = ModalRoute.of(ctx)!.settings.arguments as Match;
             return BlocProvider<VolleyballLiveModeBloc>(
-              create: (_) => VolleyballLiveModeBloc(
-                GetMatchLineupUseCase(_matchRepo),
-                GetVolleyballDataUseCase(_matchRepo),
-                PostVolleyballSetUseCase(_matchRepo),
-                PostVolleyballEventUseCase(_matchRepo),
-                RotateTeamUseCase(_matchRepo),
-              ),
+              create: (_) => sl<VolleyballLiveModeBloc>(),
               child: VolleyballLiveModeScreen(match: match),
             );
           },
@@ -259,17 +183,17 @@ class _IcesiScoreAppState extends State<IcesiScoreApp> {
             return MultiBlocProvider(
               providers: [
                 BlocProvider(
-                  create: (_) => LogoutBloc(SignOutUseCase(_authRepo)),
+                  create: (_) => sl<LogoutBloc>(),
                 ),
                 BlocProvider(
                   create: (_) => ProfileBloc(
-                    UpdateProfileUseCase(_authRepo),
+                    sl<UpdateProfileUseCase>(),
                     userId,
                   ),
                 ),
                 BlocProvider(
                   create: (_) => DeleteBloc(
-                    DeleteAccountUseCase(_authRepo),
+                    sl<DeleteAccountUseCase>(),
                     userId,
                   ),
                 ),
@@ -304,7 +228,8 @@ class _RoutingGateState extends State<_RoutingGate> {
         case 'ADMIN':
           Navigator.pushReplacementNamed(context, '/admin');
         default:
-          Navigator.pushReplacementNamed(context, '/home', arguments: widget.user);
+          Navigator.pushReplacementNamed(context, '/home',
+              arguments: widget.user);
       }
     });
   }

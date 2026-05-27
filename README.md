@@ -496,18 +496,50 @@ Cada datasource concreto implementa su respectiva interfaz abstracta (`RemoteAut
 
 Cada pantalla tiene su BLoC. El BLoC recibe eventos de la UI, llama al use case correspondiente y emite estados. Nunca instancia repositorios ni datasources directamente.
 
-El ensamblado de dependencias ocurre exclusivamente en `main.dart` (composition root):
+`LoginScreen` no sabe que existe Cognito. Solo sabe que hay un `LoginBloc` disponible en el árbol de widgets.
+
+### Inyección de Dependencias (GetIt)
+
+El ensamblado de dependencias está centralizado en `lib/injection_container.dart` usando **GetIt**. Este archivo expone la variable global `sl` (`GetIt.instance`) y la función `initDependencies()`, que se llama en `main()` antes de `runApp()`.
+
+Las dependencias se registran en orden de capas, de adentro hacia afuera:
+
+```
+DataSources → Repositories → UseCases → BLoCs/Cubits
+```
+
+**Reglas de registro:**
+
+| Tipo | Método GetIt | Motivo |
+|------|-------------|--------|
+| Data sources, repositories, use cases | `registerLazySingleton` | Se crean una sola vez; la instancia se comparte |
+| BLoCs y Cubits | `registerFactory` | Cada pantalla recibe una instancia nueva con estado propio |
+| `SessionCubit` | `registerLazySingleton` | Singleton de sesión compartido a lo largo de toda la app |
+
+**Inversión de dependencias respetada:** cada tipo se registra bajo su abstracción, no bajo su implementación concreta:
+
+```dart
+sl.registerLazySingleton<AuthRepository>(
+  () => AuthRepositoryImpl(sl<RemoteAuthDataSource>(), ...),
+);
+```
+
+De este modo los use cases reciben `AuthRepository` (el contrato del dominio), nunca `AuthRepositoryImpl`.
+
+**`CognitoAuthDataSource` es lazy:** su constructor no toca Amplify. La primera vez que se accede es dentro de `_initApp()`, después de que `Amplify.configure()` ya completó, por lo que el orden de inicialización está garantizado.
+
+**`SessionCubit` es singleton en GetIt y BlocProvider:** GetIt posee la instancia; `BlocProvider` la expone al árbol de widgets con `create: (_) => sl<SessionCubit>()`, de forma que `context.read<SessionCubit>()` sigue funcionando en todas las pantallas.
+
+En `main.dart`, cada ruta simplemente pide su BLoC al contenedor:
 
 ```dart
 '/login': (_) => BlocProvider<LoginBloc>(
-  create: (_) => LoginBloc(
-    SignInUseCase(AuthRepositoryImpl(CognitoAuthDataSource())),
-  ),
+  create: (_) => sl<LoginBloc>(),
   child: const LoginScreen(),
 ),
 ```
 
-`LoginScreen` no sabe que existe Cognito. Solo sabe que hay un `LoginBloc` disponible en el árbol de widgets.
+Los BLoCs no cambian internamente: siguen recibiendo sus dependencias por constructor, sin saber si las construyó `main.dart` o GetIt.
 
 ### Reglas de Desarrollo
 

@@ -45,6 +45,7 @@ dependencies:
   http: ^1.2.0
   web_socket_channel: ^2.4.0
   bloc_concurrency: ^0.3.0
+  get_it: ^7.7.0
 
 dev_dependencies:
   flutter_test:
