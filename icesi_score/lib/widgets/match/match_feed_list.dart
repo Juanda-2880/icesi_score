@@ -157,8 +157,28 @@ class _MatchListItemState extends State<_MatchListItem>
       case 'FINISHED':
         return 'Terminado';
       default:
-        return widget.match.matchTime ?? '--:--';
+        final dateStr = widget.match.matchDate;
+        final timeStr = widget.match.matchTime ?? '--:--';
+
+        if (dateStr != null) {
+          try {
+            final date = DateTime.parse(dateStr);
+            return '${date.day} ${_getMonthAbbr(date.month)} - $timeStr';
+          } catch (_) {
+            return timeStr;
+          }
+        }
+        return timeStr;
     }
+  }
+
+  String _getMonthAbbr(int month) {
+    const months = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ];
+    if (month < 1 || month > 12) return '';
+    return months[month - 1];
   }
 
   String? get _score {
