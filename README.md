@@ -4,7 +4,7 @@ Plataforma móvil para el seguimiento de partidos deportivos universitarios (Fú
 
 ---
 
-## Sprint 1 — Autenticación de Usuarios
+## Sprint 1 - Autenticación de Usuarios
 
 ### Contexto
 
@@ -18,7 +18,7 @@ IcesiScore maneja tres tipos de usuario, cada uno con un flujo de autenticación
 
 ---
 
-### Flujo 1 — Registro (Usuario Regular)
+### Flujo 1 - Registro (Usuario Regular)
 
 El registro aplica exclusivamente a usuarios regulares. Admins y Superadmin se crean desde dentro de la plataforma.
 
@@ -36,7 +36,7 @@ El registro aplica exclusivamente a usuarios regulares. Admins y Superadmin se c
 
 ---
 
-### Flujo 2 — Inicio de Sesión
+### Flujo 2 - Inicio de Sesión
 
 El mismo flujo de login aplica para los tres tipos de usuario; la app enruta a la pantalla correcta según el rol.
 
@@ -52,7 +52,7 @@ El mismo flujo de login aplica para los tres tipos de usuario; la app enruta a l
 
 ---
 
-### Flujo 3 — Resumen del Perfil
+### Flujo 3 - Resumen del Perfil
 
 Accesible para todos los tipos de usuario una vez autenticados.
 
@@ -72,6 +72,41 @@ Desde el perfil también es posible **cerrar sesión** o **eliminar la cuenta**.
 
 ---
 
+### Flujo 4 - Restauración de Sesión
+
+Al abrir la app sin haber cerrado sesión explícitamente, el sistema recupera la sesión guardada localmente sin mostrar la pantalla de Bienvenida ni pedir credenciales de nuevo.
+
+1. La app muestra un indicador de carga en la pantalla inicial mientras resuelve la sesión.
+2. `GetStoredSessionUseCase` lee el `AuthUser` serializado desde `FlutterSecureStorage`.
+3. Si la sesión existe, se carga en `SessionCubit` y la app navega directamente a la pantalla correspondiente al rol:
+   - **Usuario Regular** - Home (feed de partidos).
+   - **Admin** - Dashboard de Administrador.
+   - **Superadmin** - Dashboard de Superadmin.
+4. Si no hay sesión guardada (primer uso o después de un cierre de sesión explícito), la app navega a la pantalla de **Bienvenida**.
+
+La sesión se persiste en `FlutterSecureStorage` al completar el login y se elimina al cerrar sesión o al eliminar la cuenta.
+
+---
+
+### Registro de Usuarios en la Base de Datos
+
+Cuando un usuario regular completa la verificación del código de correo, Cognito invoca automáticamente la Lambda `post_confirmation` (trigger `PostConfirmation`). Esta Lambda inserta el nuevo usuario en la tabla `app_users` con `role = NORMAL`, usando el `sub` de Cognito como identificador primario. El proceso es transparente para el usuario y ocurre antes de que la app navegue al Home.
+
+---
+
+### Referencia de Endpoints REST - Sprint 1
+
+Todos los endpoints requieren JWT de Cognito en el encabezado `Authorization`.
+
+| Método | Ruta | Lambda | Acceso |
+|--------|------|--------|--------|
+| `GET` | `/user/profile` | `get_user_profile` | Todos |
+| `PUT` | `/user/profile` | `update_user_profile` | Todos |
+| `DELETE` | `/user` | `delete_user` | Todos |
+| `POST` | `/admin/users` | `create_admin_user` | SUPERADMIN |
+
+---
+
 ## Infraestructura en Tiempo Real (WebSockets)
 
 ### Visión General
@@ -82,17 +117,17 @@ Cuando un Admin registra un evento de fútbol, el sistema no solo actualiza la b
 
 ### Flujo de Broadcast
 
-1. **Admin registra un evento** — realiza una solicitud `POST /admin/matches/{id}/soccer-events` autenticada con JWT de Cognito.
+1. **Admin registra un evento** - realiza una solicitud `POST /admin/matches/{id}/soccer-events` autenticada con JWT de Cognito.
 
-2. **Lambda `post_soccer_event`** — valida el rol del usuario consultando `app_users WHERE id = cognito_sub` (el JWT no contiene `custom:role`; el rol solo vive en la base de datos). Una vez confirmado el acceso, inserta el evento en la tabla `soccer_event` y actualiza el marcador en la tabla `match`. La operación se realiza dentro de una única transacción.
+2. **Lambda `post_soccer_event`** - valida el rol del usuario consultando `app_users WHERE id = cognito_sub` (el JWT no contiene `custom:role`; el rol solo vive en la base de datos). Una vez confirmado el acceso, inserta el evento en la tabla `soccer_event` y actualiza el marcador en la tabla `match`. La operación se realiza dentro de una única transacción.
 
-3. **Publicación en SNS** — tras confirmar la transacción, `post_soccer_event` publica un mensaje en el topic `icesi-score-ws-broadcast`. La publicación es *fire-and-forget*: si falla, el error se registra en los logs pero la respuesta HTTP al Admin ya fue enviada con código `201`.
+3. **Publicación en SNS** - tras confirmar la transacción, `post_soccer_event` publica un mensaje en el topic `icesi-score-ws-broadcast`. La publicación es *fire-and-forget*: si falla, el error se registra en los logs pero la respuesta HTTP al Admin ya fue enviada con código `201`.
 
-4. **SNS invoca `ws_broadcaster`** — SNS entrega el mensaje de forma asíncrona a la Lambda `icesi-score-ws-broadcaster` mediante una suscripción de tipo `lambda`.
+4. **SNS invoca `ws_broadcaster`** - SNS entrega el mensaje de forma asíncrona a la Lambda `icesi-score-ws-broadcaster` mediante una suscripción de tipo `lambda`.
 
-5. **`ws_broadcaster` consulta DynamoDB** — hace un `Scan` sobre la tabla `icesi-score-ws-connections` filtrando por el `match_id` del evento para obtener todos los `connectionId` activos de ese partido.
+5. **`ws_broadcaster` consulta DynamoDB** - hace un `Scan` sobre la tabla `icesi-score-ws-connections` filtrando por el `match_id` del evento para obtener todos los `connectionId` activos de ese partido.
 
-6. **Envío por WebSocket** — para cada `connectionId`, `ws_broadcaster` llama a `postToConnection` de la API Gateway Management API, enviando un mensaje con la siguiente estructura:
+6. **Envío por WebSocket** - para cada `connectionId`, `ws_broadcaster` llama a `postToConnection` de la API Gateway Management API, enviando un mensaje con la siguiente estructura:
 
    ```json
    {
@@ -104,7 +139,7 @@ Cuando un Admin registra un evento de fútbol, el sistema no solo actualiza la b
 
    Si `postToConnection` retorna `GoneException` (conexión muerta), `ws_broadcaster` elimina automáticamente ese registro de DynamoDB.
 
-7. **Flutter actualiza la UI** — la pantalla del aficionado recibe el mensaje por el canal WebSocket y actualiza la línea de tiempo y el marcador sin necesidad de pull-to-refresh.
+7. **Flutter actualiza la UI** - la pantalla del aficionado recibe el mensaje por el canal WebSocket y actualiza la línea de tiempo y el marcador sin necesidad de pull-to-refresh.
 
 ---
 
@@ -162,7 +197,7 @@ Las siguientes limitaciones están identificadas y se abordarán en sprints futu
 
 ---
 
-## Sprint 2 — Gestión y Visualización de Partidos
+## Sprint 2 - Gestión y Visualización de Partidos
 
 ### Contexto
 
@@ -170,7 +205,7 @@ Sprint 2 introduce las dos funcionalidades centrales de la plataforma: la creaci
 
 ---
 
-### Flujo 1 — Creación de Partido (US-08)
+### Flujo 1 - Creación de Partido (US-08)
 
 Solo disponible para el rol **Admin**. El botón flotante (FAB) no aparece para Superadmins.
 
@@ -202,7 +237,7 @@ El partido se inserta con `status = SCHEDULED`. El campo `id_admin_creador` se t
 
 ---
 
-### Flujo 2 — Feed de Partidos (US-05)
+### Flujo 2 - Feed de Partidos (US-05)
 
 Accesible para **todos los usuarios** autenticados. El **Admin** lo ve dentro del Dashboard de Administrador (reemplaza el bloque "próximamente"); el **Usuario Regular** lo ve en la pantalla **Home**.
 
@@ -226,12 +261,12 @@ Accesible para **todos los usuarios** autenticados. El **Admin** lo ve dentro de
 5. Desliza hacia abajo para recargar el feed manualmente (pull-to-refresh).
 6. El feed también se recarga de forma automática al regresar desde la pantalla de creación de partido.
 7. Toca una tarjeta para navegar al detalle según el rol:
-   - **Usuario Regular** → pantalla de detalle de partido (en desarrollo).
-   - **Admin** → panel de modo live (en desarrollo).
+   - **Usuario Regular** - pantalla de detalle del partido (fútbol) o pantalla de detalle de voleibol.
+   - **Admin** - Modo Live de fútbol o Modo Live de voleibol según el deporte del partido.
 
 ---
 
-### Flujo 3 — Modo Live (US-06 / US-11)
+### Flujo 3 - Modo Live (US-06 / US-11)
 
 El Modo Live es la pantalla exclusiva para el rol **Admin** que permite registrar eventos de partido en tiempo real directamente sobre la alineación visual. El Admin accede desde el Dashboard al tocar la tarjeta de un partido con estado `IN_PROGRESS`.
 
@@ -239,7 +274,7 @@ La pantalla está dividida en tres bloques: el marcador con el período activo e
 
 ---
 
-#### Campo interactivo — correcciones de formación y flujo
+#### Campo interactivo - correcciones de formación y flujo
 
 **Formación y posicionamiento.** El campo usa una formación fija 1-4-4-2 para ambos equipos. Los jugadores locales ocupan la mitad inferior y los visitantes la superior; cada línea (portero, defensas, mediocampistas y delanteros) está separada un 11 % de la altura total del campo, de modo que ningún delantero cruza la línea de mediocampo y no hay solapamiento visual entre jugadores de equipos distintos. El nombre de cada jugador aparece siempre debajo de su burbuja, independientemente del equipo al que pertenezca.
 
@@ -263,21 +298,21 @@ Al tocar cualquier jugador del campo o de la banca, aparece un panel inferior co
 
 Cada tipo de evento tiene su propio formulario con un campo de minuto editable, pre-calculado desde el inicio del período activo:
 
-**Gol** — permite vincular opcionalmente una asistencia seleccionando otro jugador del mismo equipo en campo. Si se activa el toggle de asistencia, el desplegable de jugadores se vuelve obligatorio. Al confirmar, el evento de gol y el de asistencia se registran en la misma llamada.
+**Gol** - permite vincular opcionalmente una asistencia seleccionando otro jugador del mismo equipo en campo. Si se activa el toggle de asistencia, el desplegable de jugadores se vuelve obligatorio. Al confirmar, el evento de gol y el de asistencia se registran en la misma llamada.
 
-**Asistencia independiente** — permite vincular la asistencia a un gol existente del partido que aún no tenga asistencia registrada, seleccionándolo desde un desplegable con el minuto y el nombre del goleador.
+**Asistencia independiente** - permite vincular la asistencia a un gol existente del partido que aún no tenga asistencia registrada, seleccionándolo desde un desplegable con el minuto y el nombre del goleador.
 
-**Tarjeta Amarilla / Tarjeta Roja** — muestra únicamente el campo de minuto. La tarjeta roja incluye un aviso de que el jugador será marcado como expulsado en la base de datos.
+**Tarjeta Amarilla / Tarjeta Roja** - muestra únicamente el campo de minuto. La tarjeta roja incluye un aviso de que el jugador será marcado como expulsado en la base de datos.
 
-**Sustitución** — muestra el jugador fijo como referencia (el que sale si se inició desde el campo; el que entra si se inició desde la banca) y un desplegable obligatorio para seleccionar al otro participante. El cuerpo enviado al backend siempre usa `mainPlayerId` para el jugador que abandona el campo y `secondaryPlayerId` para el que ingresa, independientemente de desde qué lado se inició la acción.
+**Sustitución** - muestra el jugador fijo como referencia (el que sale si se inició desde el campo; el que entra si se inició desde la banca) y un desplegable obligatorio para seleccionar al otro participante. El cuerpo enviado al backend siempre usa `mainPlayerId` para el jugador que abandona el campo y `secondaryPlayerId` para el que ingresa, independientemente de desde qué lado se inició la acción.
 
-**Nota** — campo de texto libre de hasta 200 caracteres con el minuto de referencia.
+**Nota** - campo de texto libre de hasta 200 caracteres con el minuto de referencia.
 
 Al confirmar cualquier evento, el BLoC emite un estado de éxito, muestra un snackbar informativo y recarga la lista de eventos del partido desde la API.
 
 ---
 
-### Flujo 4 — Detalle de Partido - Fútbol (US-06)
+### Flujo 4 - Detalle de Partido - Fútbol (US-06)
 
 Accesible para el rol **Usuario Regular** al tocar cualquier tarjeta de partido de fútbol en el feed. Los Admins acceden al Modo Live en su lugar.
 
@@ -289,7 +324,7 @@ Cuando el partido está `IN_PROGRESS`, la pantalla abre una conexión WebSocket 
 
 ---
 
-### Flujo 5 — Detalle de Partido - Voleibol (US-07)
+### Flujo 5 - Detalle de Partido - Voleibol (US-07)
 
 Accesible para el rol **Usuario Regular** al tocar una tarjeta de partido de voleibol en el feed.
 
@@ -305,21 +340,21 @@ Cuando el partido está `IN_PROGRESS`, la pantalla se conecta al WebSocket. A di
 
 ---
 
-### Flujo 6 — Edición y Eliminación de Partidos (US-09, US-10)
+### Flujo 6 - Edición y Eliminación de Partidos (US-09, US-10)
 
 Solo disponible para el rol **Admin**. Ambas acciones están restringidas a partidos en estado `SCHEDULED`; la API rechaza cualquier intento sobre partidos `IN_PROGRESS` o `FINISHED`.
 
 El feed del Admin muestra las mismas tarjetas que el usuario regular, pero con soporte de swipe. Al deslizar una tarjeta hacia la izquierda emerge un panel con dos botones: **Editar** y **Eliminar**. Si el partido no está en estado `SCHEDULED`, los botones aparecen en gris y no responden a toques. Deslizar la tarjeta hacia la derecha o tocarla cierra el panel sin disparar ninguna acción.
 
-**Editar partido** — Al tocar Editar sobre un partido `SCHEDULED`, la app navega al formulario de creación pre-cargado con todos los campos actuales: deporte, equipo local, visitante, liga, fecha, hora, sede y notas. El formulario es idéntico al de creación; al confirmar se envía `PUT /admin/matches/{id}`. Al completarse con éxito, la app regresa al dashboard y muestra un snackbar de confirmación.
+**Editar partido** - Al tocar Editar sobre un partido `SCHEDULED`, la app navega al formulario de creación pre-cargado con todos los campos actuales: deporte, equipo local, visitante, liga, fecha, hora, sede y notas. El formulario es idéntico al de creación; al confirmar se envía `PUT /admin/matches/{id}`. Al completarse con éxito, la app regresa al dashboard y muestra un snackbar de confirmación.
 
-**Eliminar partido** — Al tocar Eliminar aparece un diálogo de confirmación. Si el Admin confirma, la app envía `DELETE /admin/matches/{id}`. Al retornar al feed, el partido ya no aparece en la lista. Si el partido cambió de estado entre el swipe y la confirmación, la API devuelve un error que se muestra en pantalla.
+**Eliminar partido** - Al tocar Eliminar aparece un diálogo de confirmación. Si el Admin confirma, la app envía `DELETE /admin/matches/{id}`. Al retornar al feed, el partido ya no aparece en la lista. Si el partido cambió de estado entre el swipe y la confirmación, la API devuelve un error que se muestra en pantalla.
 
 En ambos casos, al regresar al dashboard el feed se recarga automáticamente para reflejar los cambios.
 
 ---
 
-### Referencia de Endpoints REST — Sprint 2
+### Referencia de Endpoints REST - Sprint 2
 
 Todos los endpoints requieren JWT de Cognito en el encabezado `Authorization`. Los endpoints bajo `/admin/` validan el rol consultando `app_users` en PostgreSQL antes de ejecutar cualquier operación.
 
@@ -339,7 +374,7 @@ Todos los endpoints requieren JWT de Cognito en el encabezado `Authorization`. L
 
 ---
 
-## Sprint 3 — Modo Live Completo: Reloj, Campo y Voleibol
+## Sprint 3 - Modo Live Completo: Reloj, Campo y Voleibol
 
 ### Contexto
 
@@ -347,7 +382,7 @@ Sprint 3 completa el ciclo de vida de un partido en tiempo real para ambos depor
 
 ---
 
-### Flujo 1 — Reloj del Partido (US-15)
+### Flujo 1 - Reloj del Partido (US-15)
 
 El Admin controla el ciclo temporal del partido desde el `LiveModeScreen` mediante un único botón con cuatro estados secuenciales: **Iniciar 1er Tiempo → Finalizar 1er Tiempo → Iniciar 2do Tiempo → Finalizar Partido**. No es posible saltarse ningún estado ni retroceder.
 
@@ -369,7 +404,7 @@ El Admin controla el ciclo temporal del partido desde el `LiveModeScreen` median
 
 ---
 
-### Flujo 2 — Campo Interactivo (US-11, correcciones Sprint 3)
+### Flujo 2 - Campo Interactivo (US-11, correcciones Sprint 3)
 
 Sprint 3 consolida una serie de correcciones en el `FootballFieldWidget` y en los flujos de registro del `LiveModeScreen`.
 
@@ -387,7 +422,7 @@ Sprint 3 consolida una serie de correcciones en el `FootballFieldWidget` y en lo
 
 ---
 
-### Flujo 3 — Gestión de Sets (US-16)
+### Flujo 3 - Gestión de Sets (US-16)
 
 La gestión de sets es la contraparte en voleibol del reloj de fútbol: controla la apertura y el cierre de cada unidad de juego dentro del partido.
 
@@ -399,7 +434,7 @@ La gestión de sets es la contraparte en voleibol del reloj de fútbol: controla
 
 ---
 
-### Flujo 4 — Cancha Interactiva (US-17/US-18)
+### Flujo 4 - Cancha Interactiva (US-17/US-18)
 
 La cancha interactiva de voleibol sigue la misma filosofía visual que el campo de fútbol, adaptada a la mecánica de posiciones y rotaciones del deporte.
 
@@ -417,6 +452,44 @@ La cancha interactiva de voleibol sigue la misma filosofía visual que el campo 
 
 ---
 
+### Flujo 5 - Mejoras del Feed (Usuario Regular)
+
+Las siguientes mejoras aplican exclusivamente a la pantalla **Home** del Usuario Regular. El Dashboard del Admin no incluye búsqueda ni chips de filtro.
+
+**Búsqueda en tiempo real.** La barra de búsqueda integrada en la parte superior de la pantalla Home permite filtrar los partidos por nombre del equipo local, nombre del equipo visitante o nombre de la liga. El filtro opera sobre la lista en memoria sin realizar ninguna petición adicional al servidor; el `MatchFeedBloc` aplica el predicado sobre `_allMatches` cada vez que el texto cambia.
+
+**Chips de filtro por estado.** Debajo del selector de deporte, una fila de chips deslizable en horizontal permite acotar los partidos por su estado:
+
+| Chip | Estado filtrado |
+|------|----------------|
+| Todos | sin filtro (muestra todos) |
+| En vivo | `IN_PROGRESS` |
+| Programados | `SCHEDULED` |
+| Terminados | `FINISHED` |
+
+El chip activo aparece con fondo azul. Los filtros de búsqueda y estado se combinan: un partido es visible solo si satisface ambos predicados al mismo tiempo.
+
+**Fecha completa en partidos programados.** La etiqueta superior de cada tarjeta de partido (`eyebrow label`) muestra la fecha y la hora para partidos con estado `SCHEDULED` en el formato `"DD Mes - HH:MM"` (por ejemplo, `"24 May - 16:00"`). Los partidos en curso muestran `LIVE` y los finalizados muestran `Terminado`.
+
+**Estado vacío.** Cuando no hay partidos que cumplan los filtros activos o la API no devuelve resultados, el feed muestra un icono `event_busy` y un mensaje informativo en lugar de una lista vacía, manteniendo el `RefreshIndicator` activo para que el pull-to-refresh siga funcionando.
+
+---
+
+### Flujo 6 - Botones Destructivos en el Reloj (Admin)
+
+Los botones de control del reloj en `LiveModeScreen` usan estilos de color diferenciados según el tipo de acción:
+
+| Botón | Color |
+|-------|-------|
+| Iniciar 1er Tiempo | Morado (color primario) |
+| Finalizar 1er Tiempo | Rojo `#EB5757` |
+| Iniciar 2do Tiempo | Morado (color primario) |
+| Finalizar Partido | Rojo `#EB5757` |
+
+Los botones de inicio representan acciones reversibles (se puede terminar el período después), mientras que los botones de finalización son irreversibles y quedan marcados en rojo para que el Admin identifique visualmente el riesgo antes de tocar. Un botón deshabilitado (cuando no corresponde la acción en el estado actual) aparece en gris independientemente de su tipo.
+
+---
+
 ### Decisiones de Infraestructura Sprint 3
 
 Los Lambdas de escritura incorporados en este sprint (`post_match_period`, `put_match_period`, `patch_match_finish`, `post_volleyball_set`, `post_volleyball_event` y `post_rotate_team`) siguen el mismo patrón que `post_soccer_event` del Sprint 2: corren fuera de la VPC para poder alcanzar SNS sin necesidad de un NAT Gateway ni VPC Endpoints. La RDS sigue siendo accesible mediante credenciales y `sslmode=require`, por lo que sacar las funciones de la VPC no modifica el nivel de seguridad de la base de datos.
@@ -427,7 +500,7 @@ La lógica de cierre de set y de fin de partido vive íntegramente en `post_voll
 
 ---
 
-### Referencia de Endpoints REST — Sprint 3
+### Referencia de Endpoints REST - Sprint 3
 
 Todos los endpoints requieren JWT de Cognito en el encabezado `Authorization`. Los endpoints bajo `/admin/` validan el rol consultando `app_users` en PostgreSQL.
 
@@ -486,9 +559,9 @@ ui/screens  →  ui/bloc  →  domain/usecases  →  domain/repository (abstract
 ### Capa de Data
 
 `AuthRepositoryImpl` implementa `AuthRepository` orquestando tres datasources:
-- `CognitoAuthDataSource` — autenticación vía Amplify SDK (AWS Cognito)
-- `SecureStorageDataSource` — persistencia de sesión local con `flutter_secure_storage`
-- `UserProfileApiDataSource` — perfil de usuario vía HTTP al API Gateway
+- `CognitoAuthDataSource` - autenticación vía Amplify SDK (AWS Cognito)
+- `SecureStorageDataSource` - persistencia de sesión local con `flutter_secure_storage`
+- `UserProfileApiDataSource` - perfil de usuario vía HTTP al API Gateway
 
 Cada datasource concreto implementa su respectiva interfaz abstracta (`RemoteAuthDataSource`, `LocalAuthDataSource`, `UserProfileDataSource`), aplicando inversión de dependencias en toda la cadena.
 
@@ -548,7 +621,7 @@ Los BLoCs no cambian internamente: siguen recibiendo sus dependencias por constr
 2. **StatefulWidgets:**
    * Limitados **exclusivamente** a las pantallas completas (Screens/Pages).
    * Se ubican en `lib/features/<feature>/ui/screens/`.
-   * No contienen lógica de negocio — delegan al BLoC correspondiente.
+   * No contienen lógica de negocio - delegan al BLoC correspondiente.
 
 3. **StatelessWidgets:**
    * Todo lo que no sea una pantalla completa debe ser un `StatelessWidget`.
@@ -686,7 +759,7 @@ make db-down DB_PASSWORD=tu_password
 | Comando | Acción |
 |---------|--------|
 | `make venv` | Crea `.venv` e instala `psycopg2-binary` y `boto3` |
-| `make db-up DB_PASSWORD=X` | `terraform apply` — levanta RDS y despliega Lambdas |
+| `make db-up DB_PASSWORD=X` | `terraform apply` - levanta RDS y despliega Lambdas |
 | `make db-migrate DB_PASSWORD=X SUPERADMIN_PASSWORD=Y` | Aplica `schema.sql` y crea el SUPERADMIN |
 | `make superadmin-seed DB_PASSWORD=X SUPERADMIN_PASSWORD=Y` | Crea/actualiza solo el SUPERADMIN |
 | `make db-seed DB_PASSWORD=X` | Carga `seed.sql` con `psql` |
