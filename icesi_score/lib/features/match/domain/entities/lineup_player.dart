@@ -19,7 +19,7 @@ class LineupPlayer {
     this.positionCoordinate,
   });
 
-  LineupPlayer copyWith({String? status}) => LineupPlayer(
+  LineupPlayer copyWith({String? status, String? positionCoordinate}) => LineupPlayer(
         id: id,
         playerId: playerId,
         playerName: playerName,
@@ -27,6 +27,6 @@ class LineupPlayer {
         teamId: teamId,
         teamName: teamName,
         status: status ?? this.status,
-        positionCoordinate: positionCoordinate,
+        positionCoordinate: positionCoordinate ?? this.positionCoordinate,
       );
 }

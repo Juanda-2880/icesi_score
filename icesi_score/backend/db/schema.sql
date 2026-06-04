@@ -91,7 +91,8 @@ CREATE TABLE soccer_event (
     secondary_player_id UUID REFERENCES player(id) ON DELETE RESTRICT,
     event_minute        INT,
     id_parent_event     UUID REFERENCES soccer_event(id) ON DELETE RESTRICT,
-    note                TEXT
+    note                TEXT,
+    created_at          TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE volleyball_set (
@@ -114,7 +115,8 @@ CREATE TABLE volleyball_event (
     secondary_player_id UUID REFERENCES player(id) ON DELETE RESTRICT,
     id_team             UUID NOT NULL REFERENCES team(id) ON DELETE RESTRICT,
     event_timestamp     TIMESTAMP NOT NULL DEFAULT NOW(),
-    score_moment        VARCHAR(20)
+    score_moment        VARCHAR(20),
+    note                TEXT
 );
 
 -- ---------------------------------------------------------------------------
@@ -124,3 +126,8 @@ CREATE INDEX idx_match_status        ON match(status);
 CREATE INDEX idx_soccer_event_match  ON soccer_event(match_id);
 CREATE INDEX idx_volleyball_event_set ON volleyball_event(set_id);
 CREATE INDEX idx_match_lineup_match  ON match_lineup(match_id);
+
+-- ---------------------------------------------------------------------------
+-- 4. Migrations (idempotent — safe to run against existing databases)
+-- ---------------------------------------------------------------------------
+ALTER TABLE soccer_event ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT NOW();

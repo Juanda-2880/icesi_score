@@ -83,13 +83,16 @@ def handler(event, _context):
                 SELECT ve.id,
                        ve.set_id,
                        ve.event_type,
-                       p.full_name  AS player_name,
+                       p.full_name   AS player_name,
+                       p2.full_name  AS secondary_player_name,
                        ve.id_team,
-                       t.name       AS team_name,
-                       ve.score_moment
+                       t.name        AS team_name,
+                       ve.score_moment,
+                       ve.note
                 FROM volleyball_event ve
-                LEFT JOIN player p ON ve.main_player_id = p.id
-                LEFT JOIN team   t ON ve.id_team = t.id
+                LEFT JOIN player p  ON ve.main_player_id      = p.id
+                LEFT JOIN player p2 ON ve.secondary_player_id = p2.id
+                LEFT JOIN team   t  ON ve.id_team = t.id
                 WHERE ve.set_id IN (
                     SELECT id FROM volleyball_set WHERE match_id = %s
                 )
@@ -108,9 +111,11 @@ def handler(event, _context):
                     "setNumber": set_number_map.get(set_id, 0),
                     "eventType": row[2],
                     "playerName": row[3],
-                    "teamId": str(row[4]) if row[4] else None,
-                    "teamName": row[5],
-                    "scoreMoment": row[6],
+                    "secondaryPlayerName": row[4],
+                    "teamId": str(row[5]) if row[5] else None,
+                    "teamName": row[6],
+                    "scoreMoment": row[7],
+                    "note": row[8],
                 })
 
         return _response(200, {"sets": sets, "events": events})

@@ -70,7 +70,7 @@ def handler(event, _context):
                 LEFT JOIN team   t      ON p_main.team_id       = t.id
                 LEFT JOIN player p_sec  ON se.secondary_player_id = p_sec.id
                 WHERE se.match_id = %s
-                ORDER BY se.event_minute ASC
+                ORDER BY se.created_at ASC
                 """,
                 (match_id,),
             )

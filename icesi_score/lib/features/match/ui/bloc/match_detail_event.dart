@@ -25,3 +25,18 @@ class MatchEventReceivedEvent extends MatchDetailEvent {
     this.newAwayScore,
   });
 }
+
+// Dispatched by MatchDetailScreen when a WebSocket CLOCK_UPDATE message arrives.
+class MatchClockUpdateReceivedEvent extends MatchDetailEvent {
+  final String action;
+  final String? periodLabel;
+  final String? startTime;
+  final String? periodId;
+
+  const MatchClockUpdateReceivedEvent({
+    required this.action,
+    this.periodLabel,
+    this.startTime,
+    this.periodId,
+  });
+}

@@ -240,23 +240,112 @@ class MatchApiDataSource implements MatchDataSource {
 
   @override
   Future<MatchPeriod?> getActivePeriod(String idToken, String matchId) async {
+    final result = await getMatchPeriods(idToken, matchId);
+    return result.activePeriod;
+  }
+
+  @override
+  Future<({MatchPeriod? activePeriod, List<String> closedPeriodLabels})>
+      getMatchPeriods(String idToken, String matchId) async {
     final response = await _client.get(
       Uri.parse('$_kApiBase/matches/$matchId/periods'),
       headers: {'Authorization': 'Bearer $idToken'},
     );
 
     if (response.statusCode == 200) {
+      final list = jsonDecode(response.body) as List<dynamic>;
+      MatchPeriod? activePeriod;
+      final closedLabels = <String>[];
+      for (final item in list) {
+        final e = item as Map<String, dynamic>;
+        if (e['endTime'] == null) {
+          activePeriod = MatchPeriod(
+            id: e['id'] as String,
+            periodLabel: e['periodLabel'] as String,
+            startTime:
+                DateTime.parse('${e['startTime'] as String}Z').toLocal(),
+          );
+        } else {
+          closedLabels.add(e['periodLabel'] as String);
+        }
+      }
+      return (activePeriod: activePeriod, closedPeriodLabels: closedLabels);
+    }
+
+    throw MatchException('Error al obtener períodos (${response.statusCode}).');
+  }
+
+  @override
+  Future<MatchPeriod> postMatchPeriod({
+    required String idToken,
+    required String matchId,
+    required String periodLabel,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_kApiBase/admin/match-periods'),
+      headers: {
+        'Authorization': 'Bearer $idToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'matchId': matchId, 'periodLabel': periodLabel}),
+    );
+    if (response.statusCode == 201) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return MatchPeriod(
         id: data['id'] as String,
         periodLabel: data['periodLabel'] as String,
-        startTime: DateTime.parse('${data['startTime'] as String}Z').toLocal(),
+        startTime:
+            DateTime.parse('${data['startTime'] as String}Z').toLocal(),
       );
     }
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'Conflicto al iniciar período.');
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para iniciar períodos.');
+    }
+    throw MatchException('Error al iniciar período (${response.statusCode}).');
+  }
 
-    if (response.statusCode == 404) return null;
+  @override
+  Future<void> endMatchPeriod({
+    required String idToken,
+    required String periodId,
+  }) async {
+    final response = await _client.put(
+      Uri.parse('$_kApiBase/admin/match-periods/$periodId'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+    if (response.statusCode == 200) return;
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'El período ya está cerrado.');
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para cerrar períodos.');
+    }
+    throw MatchException('Error al cerrar período (${response.statusCode}).');
+  }
 
-    throw MatchException('Error al obtener período (${response.statusCode}).');
+  @override
+  Future<void> finishMatch({
+    required String idToken,
+    required String matchId,
+  }) async {
+    final response = await _client.patch(
+      Uri.parse('$_kApiBase/admin/matches/$matchId/finish'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+    if (response.statusCode == 200) return;
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'El partido no está en progreso.');
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para finalizar el partido.');
+    }
+    throw MatchException('Error al finalizar el partido (${response.statusCode}).');
   }
 
   @override
@@ -290,9 +379,11 @@ class MatchApiDataSource implements MatchDataSource {
                 setNumber: e['setNumber'] as int,
                 eventType: e['eventType'] as String,
                 playerName: e['playerName'] as String?,
+                secondaryPlayerName: e['secondaryPlayerName'] as String?,
                 teamId: e['teamId'] as String?,
                 teamName: e['teamName'] as String?,
                 scoreMoment: e['scoreMoment'] as String?,
+                note: e['note'] as String?,
               ))
           .toList();
 
@@ -324,6 +415,149 @@ class MatchApiDataSource implements MatchDataSource {
           .toList();
     }
     throw MatchException('Error al obtener alineación (${response.statusCode}).');
+  }
+
+  @override
+  Future<VolleyballSet> postVolleyballSet({
+    required String idToken,
+    required String matchId,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_kApiBase/admin/volleyball-sets'),
+      headers: {
+        'Authorization': 'Bearer $idToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'matchId': matchId}),
+    );
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return VolleyballSet(
+        id: data['id'] as String,
+        setNumber: data['setNumber'] as int,
+        homeScore: data['homeScore'] as int,
+        awayScore: data['awayScore'] as int,
+        isActive: data['isActive'] as bool,
+      );
+    }
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'Conflicto al iniciar set.');
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para iniciar sets.');
+    }
+    throw MatchException('Error al iniciar set (${response.statusCode}).');
+  }
+
+  @override
+  Future<({
+    VolleyballEvent event,
+    int homeSetScore,
+    int awaySetScore,
+    int homeSets,
+    int awaySets,
+    bool setComplete,
+    bool matchFinished,
+  })> postVolleyballEvent({
+    required String idToken,
+    required String setId,
+    required String eventType,
+    required String teamId,
+    String? mainPlayerId,
+    String? secondaryPlayerId,
+    String? note,
+  }) async {
+    final body = <String, dynamic>{
+      'setId': setId,
+      'eventType': eventType,
+      'teamId': teamId,
+    };
+    if (mainPlayerId != null) body['mainPlayerId'] = mainPlayerId;
+    if (secondaryPlayerId != null) body['secondaryPlayerId'] = secondaryPlayerId;
+    if (note != null && note.isNotEmpty) body['note'] = note;
+
+    final response = await _client.post(
+      Uri.parse('$_kApiBase/admin/volleyball-events'),
+      headers: {
+        'Authorization': 'Bearer $idToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final e = data['event'] as Map<String, dynamic>;
+      final setScore = data['setScore'] as Map<String, dynamic>;
+      final matchScore = data['matchScore'] as Map<String, dynamic>;
+      return (
+        event: VolleyballEvent(
+          id: e['id'] as String,
+          setId: setId,
+          setNumber: 0,
+          eventType: e['eventType'] as String,
+          playerName: e['playerName'] as String?,
+          secondaryPlayerName: e['secondaryPlayerName'] as String?,
+          teamId: e['teamId'] as String?,
+          scoreMoment: e['scoreMoment'] as String?,
+          note: e['note'] as String?,
+        ),
+        homeSetScore: setScore['homeScore'] as int,
+        awaySetScore: setScore['awayScore'] as int,
+        homeSets: matchScore['homeSets'] as int,
+        awaySets: matchScore['awaySets'] as int,
+        setComplete: data['setComplete'] as bool,
+        matchFinished: data['matchFinished'] as bool,
+      );
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para registrar eventos.');
+    }
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'El set no está activo.');
+    }
+    throw MatchException('Error al registrar evento (${response.statusCode}).');
+  }
+
+  @override
+  Future<List<LineupPlayer>> rotateTeam({
+    required String idToken,
+    required String matchId,
+    required String teamId,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_kApiBase/admin/matches/$matchId/rotate-team'),
+      headers: {
+        'Authorization': 'Bearer $idToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'teamId': teamId}),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final list = data['lineup'] as List<dynamic>;
+      return list
+          .map((e) => LineupPlayer(
+                id: '',
+                playerId: e['playerId'] as String,
+                playerName: '',
+                jerseyNumber: 0,
+                teamId: teamId,
+                teamName: '',
+                status: 'ON_FIELD',
+                positionCoordinate: e['positionCoordinate'] as String?,
+              ))
+          .toList();
+    }
+    if (response.statusCode == 403) {
+      throw const MatchException('Sin permisos para rotar equipo.');
+    }
+    if (response.statusCode == 409) {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      throw MatchException(decoded['error'] as String? ?? 'No hay set activo.');
+    }
+    throw MatchException('Error al rotar equipo (${response.statusCode}).');
   }
 
   @override

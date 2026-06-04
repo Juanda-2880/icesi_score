@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
+import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -35,14 +37,16 @@ class _VolleyballDetailScreenState extends State<VolleyballDetailScreen> {
     context
         .read<VolleyballDetailBloc>()
         .add(VolleyballDetailStartedEvent(widget.match));
-    if (widget.match.status == 'IN_PROGRESS') _connectWs();
+    if (widget.match.status == 'IN_PROGRESS') (() async => await _connectWs())();
   }
 
-  void _connectWs() {
+  Future<void> _connectWs() async {
     try {
-      _channel = WebSocketChannel.connect(
-        Uri.parse('$wsBaseUrl?match_id=${widget.match.id}'),
-      );
+      final session =
+          await Amplify.Auth.fetchAuthSession() as CognitoAuthSession;
+      final idToken = session.userPoolTokensResult.value.idToken.raw;
+      final wsUrl = '$wsBaseUrl?token=$idToken&match_id=${widget.match.id}';
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       _channel!.stream.listen(
         (raw) {
           if (!mounted) return;
@@ -50,7 +54,7 @@ class _VolleyballDetailScreenState extends State<VolleyballDetailScreen> {
           if (msg['type'] == 'VOLLEYBALL_EVENT') {
             context
                 .read<VolleyballDetailBloc>()
-                .add(const VolleyballDetailRefreshRequestedEvent());
+                .add(VolleyballDetailWsEventReceivedEvent(msg));
           }
         },
         onError: (_) {},

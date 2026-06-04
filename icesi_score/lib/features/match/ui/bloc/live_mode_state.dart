@@ -16,6 +16,7 @@ class LiveModeLoadedState extends LiveModeState {
   final List<LineupPlayer> lineup;
   final List<SoccerEvent> events;
   final MatchPeriod? activePeriod;
+  final List<String> closedPeriodLabels;
   final int homeScore;
   final int awayScore;
   final bool isSubmitting;
@@ -25,6 +26,7 @@ class LiveModeLoadedState extends LiveModeState {
     required this.lineup,
     required this.events,
     this.activePeriod,
+    this.closedPeriodLabels = const [],
     required this.homeScore,
     required this.awayScore,
     this.isSubmitting = false,
@@ -42,17 +44,22 @@ class LiveModeLoadedState extends LiveModeState {
   }
 
   LiveModeLoadedState copyWith({
+    Match? match,
     List<LineupPlayer>? lineup,
     List<SoccerEvent>? events,
+    MatchPeriod? activePeriod,
+    List<String>? closedPeriodLabels,
     int? homeScore,
     int? awayScore,
     bool? isSubmitting,
+    bool clearActivePeriod = false,
   }) =>
       LiveModeLoadedState(
-        match: match,
+        match: match ?? this.match,
         lineup: lineup ?? this.lineup,
         events: events ?? this.events,
-        activePeriod: activePeriod,
+        activePeriod: clearActivePeriod ? null : (activePeriod ?? this.activePeriod),
+        closedPeriodLabels: closedPeriodLabels ?? this.closedPeriodLabels,
         homeScore: homeScore ?? this.homeScore,
         awayScore: awayScore ?? this.awayScore,
         isSubmitting: isSubmitting ?? this.isSubmitting,

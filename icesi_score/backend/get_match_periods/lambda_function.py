@@ -48,25 +48,25 @@ def handler(event, _context):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, period_label, start_time
+                SELECT id, period_label, start_time, end_time
                 FROM match_period
                 WHERE id_match = %s
-                  AND end_time IS NULL
-                ORDER BY start_time DESC
-                LIMIT 1
+                ORDER BY start_time ASC
                 """,
                 (match_id,),
             )
-            row = cur.fetchone()
+            rows = cur.fetchall()
 
-        if row is None:
-            return _response(404, {"error": "No hay período activo"})
+        periods = []
+        for row in rows:
+            periods.append({
+                "id":          str(row[0]),
+                "periodLabel": row[1],
+                "startTime":   row[2].isoformat(),
+                "endTime":     row[3].isoformat() if row[3] else None,
+            })
 
-        return _response(200, {
-            "id":          str(row[0]),
-            "periodLabel": row[1],
-            "startTime":   row[2].isoformat(),
-        })
+        return _response(200, periods)
 
     except psycopg2.OperationalError as exc:
         print(f"[get_match_periods] ERROR de conexión: {exc}")

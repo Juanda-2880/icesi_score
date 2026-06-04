@@ -177,13 +177,14 @@ def lambda_handler(event, context):
             "id":                event_id,
             "eventType":         event_type,
             "minute":            event_minute,
-            "mainPlayerId":      main_player_id,
-            "playerName":        player_name,
-            "teamId":            player_team_id,
-            "scoreAtMoment":     f"{home_score}-{away_score}",
-            "parentEventId":     parent_event_id,
+            "mainPlayerId":        main_player_id,
+            "secondaryPlayerId":   secondary_id,
+            "playerName":          player_name,
+            "teamId":              player_team_id,
+            "scoreAtMoment":       f"{home_score}-{away_score}",
+            "parentEventId":       parent_event_id,
             "secondaryPlayerName": player_in_name,
-            "note":              note,
+            "note":                note,
         }
 
         if SNS_BROADCAST_ARN:

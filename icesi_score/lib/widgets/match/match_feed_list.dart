@@ -31,9 +31,32 @@ class MatchFeedList extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.only(top: 100),
                 child: Center(
-                  child: Text(
-                    'No hay partidos disponibles',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.event_busy,
+                        size: 72,
+                        color: Colors.white24,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No hay partidos disponibles',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Vuelve pronto para ver los proximos partidos',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -134,8 +157,28 @@ class _MatchListItemState extends State<_MatchListItem>
       case 'FINISHED':
         return 'Terminado';
       default:
-        return widget.match.matchTime ?? '--:--';
+        final dateStr = widget.match.matchDate;
+        final timeStr = widget.match.matchTime ?? '--:--';
+
+        if (dateStr != null) {
+          try {
+            final date = DateTime.parse(dateStr);
+            return '${date.day} ${_getMonthAbbr(date.month)} - $timeStr';
+          } catch (_) {
+            return timeStr;
+          }
+        }
+        return timeStr;
     }
+  }
+
+  String _getMonthAbbr(int month) {
+    const months = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ];
+    if (month < 1 || month > 12) return '';
+    return months[month - 1];
   }
 
   String? get _score {

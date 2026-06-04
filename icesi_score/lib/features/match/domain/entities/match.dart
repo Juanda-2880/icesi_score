@@ -33,10 +33,10 @@ class Match {
     this.notes,
   });
 
-  Match copyWith({int? homeScore, int? awayScore}) => Match(
+  Match copyWith({int? homeScore, int? awayScore, String? status}) => Match(
         id: id,
         sport: sport,
-        status: status,
+        status: status ?? this.status,
         matchDate: matchDate,
         matchTime: matchTime,
         venue: venue,

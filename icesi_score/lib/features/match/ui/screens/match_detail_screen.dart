@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
@@ -11,6 +10,7 @@ import '../../../../amplifyconfiguration.dart' show wsBaseUrl;
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/live_badge.dart';
 import '../../../../widgets/common/team_avatar.dart';
+import '../../../../widgets/match/running_clock.dart';
 import '../../../../widgets/match/soccer_event_card.dart';
 import '../../../../widgets/match/team_helpers.dart';
 import '../../domain/entities/match.dart';
@@ -30,8 +30,6 @@ class MatchDetailScreen extends StatefulWidget {
 }
 
 class _MatchDetailScreenState extends State<MatchDetailScreen> {
-  Timer? _clockTimer;
-  Duration _elapsed = Duration.zero;
   final Set<String> _expandedIds = {};
   WebSocketChannel? _channel;
 
@@ -39,7 +37,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   void initState() {
     super.initState();
     context.read<MatchDetailBloc>().add(MatchDetailStartedEvent(widget.match));
-    if (widget.match.status == 'IN_PROGRESS') (() async => await _connectWs())();
+    if (widget.match.status == 'IN_PROGRESS') _connectWs();
   }
 
   Future<void> _connectWs() async {
@@ -54,17 +52,27 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           if (!mounted) return;
           try {
             final msg = jsonDecode(raw as String) as Map<String, dynamic>;
-            if (msg['type'] != 'SOCCER_EVENT') return;
-            final event = msg['event'] as Map<String, dynamic>?;
-            final score = msg['newScore'] as Map<String, dynamic>?;
-            if (event == null) return;
-            final newHomeScore = (score?['homeScore'] as num?)?.toInt();
-            final newAwayScore = (score?['awayScore'] as num?)?.toInt();
-            context.read<MatchDetailBloc>().add(MatchEventReceivedEvent(
-                  _parseSoccerEvent(event, widget.match.id),
-                  newHomeScore: newHomeScore,
-                  newAwayScore: newAwayScore,
-                ));
+            final type = msg['type'] as String?;
+
+            if (type == 'SOCCER_EVENT') {
+              final event = msg['event'] as Map<String, dynamic>?;
+              final score = msg['newScore'] as Map<String, dynamic>?;
+              if (event == null) return;
+              final newHomeScore = (score?['homeScore'] as num?)?.toInt();
+              final newAwayScore = (score?['awayScore'] as num?)?.toInt();
+              context.read<MatchDetailBloc>().add(MatchEventReceivedEvent(
+                    _parseSoccerEvent(event, widget.match.id),
+                    newHomeScore: newHomeScore,
+                    newAwayScore: newAwayScore,
+                  ));
+            } else if (type == 'CLOCK_UPDATE') {
+              context.read<MatchDetailBloc>().add(MatchClockUpdateReceivedEvent(
+                    action: msg['action'] as String? ?? '',
+                    periodLabel: msg['periodLabel'] as String?,
+                    startTime: msg['startTime'] as String?,
+                    periodId: msg['periodId'] as String?,
+                  ));
+            }
           } catch (_) {}
         },
         onError: (_) {},
@@ -73,33 +81,10 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     } catch (_) {}
   }
 
-  void _startClock(MatchPeriod period) {
-    _clockTimer?.cancel();
-    _elapsed = DateTime.now().difference(period.startTime);
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _elapsed = DateTime.now().difference(period.startTime);
-      });
-    });
-  }
-
-  void _stopClock() {
-    _clockTimer?.cancel();
-    _clockTimer = null;
-  }
-
   @override
   void dispose() {
-    _stopClock();
     _channel?.sink.close();
     super.dispose();
-  }
-
-  String _formatClock() {
-    final m = _elapsed.inMinutes;
-    final s = _elapsed.inSeconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   void _toggleExpand(String id) {
@@ -142,17 +127,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BlocConsumer<MatchDetailBloc, MatchDetailState>(
-        listener: (_, state) {
-          if (state is MatchDetailLoadedState) {
-            if (state.match.status == 'IN_PROGRESS' &&
-                state.activePeriod != null) {
-              _startClock(state.activePeriod!);
-            } else {
-              _stopClock();
-            }
-          }
-        },
+      body: BlocBuilder<MatchDetailBloc, MatchDetailState>(
         builder: (_, state) {
           if (state is MatchDetailLoadingState) {
             return const Center(child: CircularProgressIndicator());
@@ -168,8 +143,6 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           if (state is MatchDetailLoadedState) {
             return _Body(
               state: state,
-              elapsed: _elapsed,
-              clockLabel: _formatClock(),
               expandedIds: _expandedIds,
               onToggleExpand: _toggleExpand,
               onRefresh: _onRefresh,
@@ -183,21 +156,17 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// _Body — stateless delegate so the clock setState only redraws the header
+// _Body — stateless delegate; RunningClock manages its own timer internally
 // ---------------------------------------------------------------------------
 
 class _Body extends StatelessWidget {
   final MatchDetailLoadedState state;
-  final Duration elapsed;
-  final String clockLabel;
   final Set<String> expandedIds;
   final void Function(String) onToggleExpand;
   final Future<void> Function() onRefresh;
 
   const _Body({
     required this.state,
-    required this.elapsed,
-    required this.clockLabel,
     required this.expandedIds,
     required this.onToggleExpand,
     required this.onRefresh,
@@ -227,7 +196,7 @@ class _Body extends StatelessWidget {
         children: [
           _ScoreHeader(
             match: match,
-            clockLabel: clockLabel,
+            activePeriod: state.activePeriod,
           ),
           const SizedBox(height: 24),
           _EventsSection(
@@ -249,9 +218,9 @@ class _Body extends StatelessWidget {
 
 class _ScoreHeader extends StatelessWidget {
   final Match match;
-  final String clockLabel;
+  final MatchPeriod? activePeriod;
 
-  const _ScoreHeader({required this.match, required this.clockLabel});
+  const _ScoreHeader({required this.match, this.activePeriod});
 
   @override
   Widget build(BuildContext context) {
@@ -303,8 +272,11 @@ class _ScoreHeader extends StatelessWidget {
                         align: CrossAxisAlignment.start,
                       ),
                       Expanded(
-                          child: _CenterDisplay(
-                              match: match, clockLabel: clockLabel)),
+                        child: _CenterDisplay(
+                          match: match,
+                          activePeriod: activePeriod,
+                        ),
+                      ),
                       _TeamColumn(
                         isHome: false,
                         teamName: match.awayTeamName,
@@ -373,9 +345,9 @@ class _TeamColumn extends StatelessWidget {
 
 class _CenterDisplay extends StatelessWidget {
   final Match match;
-  final String clockLabel;
+  final MatchPeriod? activePeriod;
 
-  const _CenterDisplay({required this.match, required this.clockLabel});
+  const _CenterDisplay({required this.match, this.activePeriod});
 
   @override
   Widget build(BuildContext context) {
@@ -395,10 +367,17 @@ class _CenterDisplay extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              clockLabel,
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
-            ),
+            if (activePeriod != null)
+              RunningClock(
+                startTime: activePeriod!.startTime,
+                prefix: activePeriod!.periodLabel,
+                style: const TextStyle(color: Colors.white54, fontSize: 13),
+              )
+            else
+              const Text(
+                'Descanso',
+                style: TextStyle(color: Colors.white54, fontSize: 13),
+              ),
           ],
         );
 

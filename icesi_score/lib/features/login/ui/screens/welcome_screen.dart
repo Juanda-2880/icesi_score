@@ -12,7 +12,7 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Spacer(),
+              const Spacer(flex: 1),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -48,8 +48,14 @@ class WelcomeScreen extends StatelessWidget {
                 'Track • Follow • Stay Updated',
                 style: TextStyle(color: Colors.orangeAccent, fontSize: 14),
               ),
-              const Spacer(),
+              const Spacer(flex: 3),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 55),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 onPressed: () => Navigator.pushNamed(context, '/login'),
                 child: const Text('Iniciar Sesión'),
               ),
@@ -72,6 +78,7 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),

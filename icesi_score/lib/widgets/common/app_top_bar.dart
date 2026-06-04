@@ -4,11 +4,13 @@ import '../../theme/app_theme.dart';
 class AppTopBar extends StatelessWidget {
   final String userName;
   final VoidCallback onProfileTap;
+  final ValueChanged<String>? onSearchChanged;
 
   const AppTopBar({
     super.key,
     required this.userName,
     required this.onProfileTap,
+    this.onSearchChanged,
   });
 
   static const Color _purple = Color(0xFF4343D8);
@@ -26,22 +28,39 @@ class AppTopBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Container(
+            child: SizedBox(
               height: 40,
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                children: [
-                  SizedBox(width: 12),
-                  Icon(Icons.search, color: Colors.grey, size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    'Search teams, matches...',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+              child: TextField(
+                onChanged: onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Buscar equipos, partidos...',
+                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+                  filled: true,
+                  fillColor: AppTheme.surfaceColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
                   ),
-                ],
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Colors.grey,
+                    size: 18,
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                ),
+                style: const TextStyle(fontSize: 14),
               ),
             ),
           ),

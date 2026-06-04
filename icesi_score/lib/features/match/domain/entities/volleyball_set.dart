@@ -14,4 +14,14 @@ class VolleyballSet {
     required this.isActive,
     this.endTime,
   });
+
+  VolleyballSet copyWithScores({required int homeScore, required int awayScore}) =>
+      VolleyballSet(
+        id: id,
+        setNumber: setNumber,
+        homeScore: homeScore,
+        awayScore: awayScore,
+        isActive: isActive,
+        endTime: endTime,
+      );
 }
